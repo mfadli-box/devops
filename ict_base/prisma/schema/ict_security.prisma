@@ -1,0 +1,143 @@
+model ict_nginx_log {
+  id                       String            @id @default(uuid())
+  timestamp                DateTime          @default(now())
+  host                     String            @db.VarChar(255)
+  server_ip                String            @db.VarChar(45)
+  client_ip                String            @db.VarChar(45)
+  country_iso              String?           @db.VarChar(5)
+  xff                      String?           @db.Text
+  traffic_type             String            @db.VarChar(50)
+  domain                   String            @db.VarChar(255)
+  url                      String            @db.Text
+  referer                  String?           @db.Text
+  args                     String?           @db.Text
+  upstreamtime             String?           @db.VarChar(50)
+  responsetime             String?           @db.VarChar(50)
+  request_method           String            @db.VarChar(10)
+  status                   String            @db.VarChar(5)
+  size                     String?           @db.VarChar(50)
+  request_body             String?           @db.Text
+  request_length           Int?
+  protocol                 String?           @db.VarChar(20)
+  upstreamhost             String?           @db.VarChar(255)
+  file_dir                 String?           @db.VarChar(255)
+  http_user_agent          String?           @db.Text
+  created_at               DateTime          @default(now())
+
+  @@index([client_ip])
+  @@index([country_iso])
+  @@index([timestamp])
+}
+
+model ict_nginx_app {
+  id                       String            @id @default(uuid())
+  timestamp                DateTime          @default(now())
+  host                     String            @db.VarChar(255)
+  server_ip                String            @db.VarChar(45)
+  client_ip                String            @db.VarChar(45)
+  country_iso              String?           @db.VarChar(5)
+  xff                      String?           @db.Text
+  traffic_type             String            @db.VarChar(50)
+  domain                   String            @db.VarChar(255)
+  url                      String            @db.Text
+  referer                  String?           @db.Text
+  args                     String?           @db.Text
+  upstreamtime             String?           @db.VarChar(50)
+  responsetime             String?           @db.VarChar(50)
+  request_method           String            @db.VarChar(10)
+  status                   String            @db.VarChar(5)
+  size                     String?           @db.VarChar(50)
+  request_body             String?           @db.Text
+  request_length           Int?
+  protocol                 String?           @db.VarChar(20)
+  upstreamhost             String?           @db.VarChar(255)
+  file_dir                 String?           @db.VarChar(255)
+  http_user_agent          String?           @db.Text
+  created_at               DateTime          @default(now())
+
+  @@index([client_ip])
+  @@index([timestamp])
+  @@index([country_iso])
+}
+
+model ict_nginx_atc {
+  id                       String            @id @default(uuid())
+  timestamp                DateTime          @default(now())
+  host                     String            @db.VarChar(255)
+  server_ip                String            @db.VarChar(45)
+  client_ip                String            @db.VarChar(45)
+  country_iso              String?           @db.VarChar(5)
+  xff                      String?           @db.Text
+  traffic_type             String            @db.VarChar(50)
+  domain                   String            @db.VarChar(255)
+  url                      String            @db.Text
+  referer                  String?           @db.Text
+  args                     String?           @db.Text
+  upstreamtime             String?           @db.VarChar(50)
+  responsetime             String?           @db.VarChar(50)
+  request_method           String            @db.VarChar(10)
+  status                   String            @db.VarChar(5)
+  size                     String?           @db.VarChar(50)
+  request_body             String?           @db.Text
+  request_length           Int?
+  protocol                 String?           @db.VarChar(20)
+  upstreamhost             String?           @db.VarChar(255)
+  file_dir                 String?           @db.VarChar(255)
+  http_user_agent          String?           @db.Text
+  created_at               DateTime          @default(now())
+
+  @@index([client_ip])
+  @@index([timestamp])
+  @@index([country_iso])
+}
+
+model ict_nginx_atc_sum {
+  id                       String            @id @default(uuid())
+  date                     String            @db.VarChar(10)
+  client_ip                String            @db.VarChar(45)
+  traffic_type             String            @db.VarChar(50)
+  target_domain            String            @db.VarChar(255)
+  total_hits               BigInt            @default(1)
+  last_seen                DateTime          @default(now())
+
+  @@unique([date, client_ip, traffic_type, target_domain], name: "uq_atc_sum_composite")
+}
+
+model ict_nginx_sla {
+  id                       String            @id @default(uuid())
+  date                     String            @unique @db.VarChar(10)
+  total_requests           BigInt            @default(0)
+  successful_requests      BigInt            @default(0)
+  client_errors            BigInt            @default(0)
+  server_errors            BigInt            @default(0)
+  attack_requests          BigInt            @default(0)
+  avg_response_time        Decimal           @db.Decimal(10, 4) @default(0.0000)
+  sla_percentage           Decimal           @db.Decimal(5, 2) @default(0.00)
+}
+
+model ict_ip_whitelist {
+  id                       String            @id @default(uuid())
+  ip_or_cidr               String            @unique @db.VarChar(50)
+  description              String?           @db.Text
+  created_at               DateTime          @default(now())
+}
+
+model ict_ip_blacklist {
+  id                       String            @id @default(uuid())
+  ip                       String            @unique @db.VarChar(45)
+  threat_score             Int
+  reason                   String            @db.VarChar(50)
+  banned_at                DateTime          @default(now())
+  expires_at               DateTime?
+}
+
+model ict_waf_bypass_rule {
+  id                       String            @id @default(uuid())
+  domain                   String            @db.VarChar(255)
+  url_path                 String            @db.Text
+  args_pattern             String?           @db.Text
+  description              String?           @db.Text
+  created_at               DateTime          @default(now())
+
+  @@index([domain, url_path])
+}

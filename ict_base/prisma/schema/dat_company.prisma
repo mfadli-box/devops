@@ -1,0 +1,28 @@
+model dat_company {
+  id                       String            @id @default(uuid())
+  slug                     String            @unique
+  name                     String
+  vat_id                   String?
+  reg_no                   String?
+  address                  String?
+  valuta                   String            @default("IDR")
+  hris_link                String?
+  is_active                Boolean           @default(false)
+  created_at               DateTime          @default(now())
+  updated_at               DateTime          @default(now())
+  users                    dat_user_company[]
+  modules                  dat_company_module[]
+}
+
+model dat_company_module {
+  id                       String            @id @default(uuid())
+  company_id               String
+  module_id                String
+  is_active                Boolean           @default(false)
+  created_at               DateTime          @default(now())
+  updated_at               DateTime          @default(now())
+  company                  dat_company       @relation(fields: [company_id], references: [id])
+  module                   dat_module        @relation(fields: [module_id], references: [id])
+
+  @@unique([company_id, module_id])
+}

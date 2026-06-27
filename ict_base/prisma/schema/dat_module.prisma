@@ -1,0 +1,15 @@
+model dat_module {
+  id                       String            @id @default(uuid())
+  parent_id                String?
+  code                     String            @unique
+  name                     String
+  path                     String
+  is_page                  Boolean           @default(true)
+  is_active                Boolean           @default(true)
+  created_at               DateTime          @default(now())
+  updated_at               DateTime          @default(now())
+  parent                   dat_module?       @relation("modular", fields: [parent_id], references: [id])
+  children                 dat_module[]      @relation("modular")
+  companies                dat_company_module[]
+  privileges               dat_user_privilege[]
+}

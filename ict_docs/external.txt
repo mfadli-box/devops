@@ -1,0 +1,26 @@
+UptimeRobot
+POST {rest_domain}/hook/uptimerobot [Send as JSON]
+{
+	"monitorid": *monitorID*,
+	"monitorurl": "*monitorURL*",
+	"monitorfriendlyname": "*monitorFriendlyName*",
+	"alerttype": *alertType*,
+	"alerttypefriendlyname": "*alertTypeFriendlyName*",
+	"alertdetails": "*alertDetails*",
+	"alertduration": "*alertDuration*",
+	"alertdatetime": *alertDateTime*,
+	"monitoralertcontacts": "*monitorAlertContacts*",
+	"sslexpirydate": *sslExpiryDate*,
+	"sslexpirydaysleft": "*sslExpiryDaysLeft*",
+	"dashboardurl": "*dashboardUrl*",
+	"monitortype": "*monitorType*",
+	"httpstatuscode": "*httpStatusCode*",
+	"monitoringregions": "*monitoringRegions*",
+	"monitortags": "*monitorTags*",
+	"monitorgroup": "*monitorGroup*",
+	"incidentstarttime": *incidentStartTime*,
+	"incidentendtime": "*incidentEndTime*",
+	"responsetime": "*responseTime*"
+}
+
+

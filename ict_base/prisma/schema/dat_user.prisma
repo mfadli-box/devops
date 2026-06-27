@@ -1,0 +1,84 @@
+enum dat_action_type {
+  hide
+  view
+  book
+  post
+}
+
+model dat_user {
+  id                       String            @id @default(uuid())
+  username                 String
+  email                    String
+  password                 String
+  fullname                 String
+  phone                    String?
+  company_id               String            @default("")
+  employee_id              String?
+  regional_id              String?
+  office_id                String?
+  department_id            String?
+  division_id              String?
+  role                     String            @default("staff")
+  is_admin                 Boolean           @default(false)
+  is_hris                  Boolean           @default(false)
+  is_active                Boolean           @default(false)
+  created_at               DateTime          @default(now())
+  updated_at               DateTime          @default(now())
+  companies                dat_user_company[]
+  sessions                 dat_user_session[]
+
+  @@unique([company_id, username])
+}
+
+model dat_user_company {
+  id                       String            @id @default(uuid())
+  user_id                  String
+  company_id               String
+  is_active                Boolean           @default(false)
+  created_at               DateTime          @default(now())
+  updated_at               DateTime          @default(now())
+  user                     dat_user          @relation(fields: [user_id], references: [id])
+  company                  dat_company       @relation(fields: [company_id], references: [id])
+  privileges               dat_user_privilege[]
+
+  @@unique([user_id, company_id])
+}
+
+model dat_user_privilege {
+  id                       String            @id @default(uuid())
+  user_company_id          String
+  module_id                String
+  level                    dat_action_type   @default(hide)
+  created_at               DateTime          @default(now())
+  updated_at               DateTime          @default(now())
+  user_company             dat_user_company  @relation(fields: [user_company_id], references: [id])
+  module                   dat_module        @relation(fields: [module_id], references: [id])
+
+  @@unique([user_company_id, module_id])
+}
+
+model dat_user_session {
+  id                       String            @id @default(uuid())
+  user_id                  String
+  token                    String            @unique
+  ip_address               String?
+  user_agent               String?
+  created_at               DateTime          @default(now())
+  expires_at               DateTime
+  user                     dat_user          @relation(fields: [user_id], references: [id])
+}
+
+model dat_user_action {
+  id                       String            @id @default(uuid())
+  user_id                  String
+  company_id               String?
+  module_code              String?
+  action                   String
+  path                     String
+  ip_address               String?
+  user_agent               String?
+  created_at               DateTime          @default(now())
+
+  @@index([user_id])
+  @@index([company_id])
+}

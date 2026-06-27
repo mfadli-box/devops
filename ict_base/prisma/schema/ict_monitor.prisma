@@ -1,0 +1,27 @@
+model ict_uptimerobot_log {
+  id                       String            @id @default(uuid())
+  monitor_id               Int
+  monitor_url              String
+  monitor_friendly_name    String
+  alert_type               Int
+  alert_type_friendly_name String
+  alert_details            String?
+  alert_duration           Int?
+  alert_datetime           DateTime
+  monitor_alert_contacts   String
+  ssl_expiry_date          DateTime?
+  ssl_expiry_days_left     Int?
+  dashboard_url            String
+  monitor_type             String
+  http_status_code         Int?
+  monitoring_regions       Json
+  monitor_tags             Json
+  monitor_group            String?
+  incident_start_time      DateTime
+  incident_end_time        DateTime?
+  response_time            Int?
+  created_at               DateTime          @default(now())
+
+  @@index([monitor_id])
+  @@index([alert_datetime])
+}
