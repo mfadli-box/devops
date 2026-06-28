@@ -1716,7 +1716,7 @@ export default function BoardPage() {
                 ) : (
                   <div className="mt-2 rounded-1xl bg-slate-50 p-3">
                     <p className="text-sm text-slate-700">
-                      Modul ini menampilkan konten utama. Detail implementasi modul akan ditampilkan di sini sesuai dengan struktur yang dipilih.
+                      Modul dalam pengembangan
                     </p>
                   </div>
                 )}

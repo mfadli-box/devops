@@ -16,6 +16,7 @@ services:
       - POSTGRES_USER=${PG_USER:-dbe}
       - POSTGRES_PASSWORD=${PG_PASS:-rahasia}
       - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256 --auth-local=scram-sha-256
+      - TZ=${TZ:-Asia/Jakarta}
     ports:
       - "36661:5432"
     volumes:
@@ -48,6 +49,7 @@ services:
       - MAX_CLIENT_CONN=1000
       - DEFAULT_POOL_SIZE=20
       - AUTH_TYPE=scram-sha-256
+      - TZ=${TZ:-Asia/Jakarta}
     ports:
       - "36662:5432"
     volumes:
@@ -68,9 +70,9 @@ services:
         max-size: "10m"
         max-file: "3"
     environment:
-      TZ: "Asia/Jakarta"
-      PGADMIN_DEFAULT_EMAIL: ${AD_EMAIL:-admin@localhost}
-      PGADMIN_DEFAULT_PASSWORD: ${AD_PASS:-rahasia}
+      - TZ=${TZ:-Asia/Jakarta}
+      - PGADMIN_DEFAULT_EMAIL=${AD_EMAIL:-admin@localhost}
+      - PGADMIN_DEFAULT_PASSWORD=${AD_PASS:-rahasia}
     restart: always
     volumes:
       - ./ict_docs/pgadmin:/var/lib/pgadmin
@@ -92,12 +94,13 @@ services:
         max-size: "10m"
         max-file: "3"
     environment:
-      PG_HOST: ${PG_POOL:-ict_pool}
-      PG_PORT: ${PG_PORT:-5432}
-      PG_USER: ${PG_USER:-dbe}
-      PG_PASS: ${PG_PASS:-rahasia}
-      PG_DATA: ${PG_DATA:-ict}
-      IS_POOL: ${IS_POOL:-true}
+      - PG_HOST=${PG_POOL:-ict_pool}
+      - PG_PORT=${PG_PORT:-5432}
+      - PG_USER=${PG_USER:-dbe}
+      - PG_PASS=${PG_PASS:-rahasia}
+      - PG_DATA=${PG_DATA:-ict}
+      - IS_POOL=${IS_POOL:-true}
+      - TZ=${TZ:-Asia/Jakarta}
     ports:
       - "36665:36665"
     depends_on:
@@ -117,7 +120,8 @@ services:
         max-size: "10m"
         max-file: "3"
     environment:
-      BE_POOL: ${BE_POOL:-http://ict_rest:36665}
+      - BE_POOL=${BE_POOL:-http://ict_rest:36665}
+      - TZ=${TZ:-Asia/Jakarta}
     ports:
       - "36666:36666"
     depends_on:
@@ -145,6 +149,7 @@ services:
       - IS_POOL=${IS_POOL:-true}
       - ES_LINK=${ES_LINK:-http://elasticsearch:9200}
       - FT_HTTP=${FT_HTTP:-150}
+      - TZ=${TZ:-Asia/Jakarta}
     depends_on:
       - ict_pool
     restart: always
@@ -171,6 +176,7 @@ services:
       - RE_PATH=${RE_PATH:-log_rotate}
       - RE_NORMAL=${RE_NORMAL:-7}
       - RE_ATTACK=${RE_ATTACK:-90}
+      - TZ=${TZ:-Asia/Jakarta}
     volumes:
       - ./ict_docs/pgbackup:/var/log/auto
     depends_on:

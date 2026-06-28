@@ -339,9 +339,7 @@ func syncAndAnalyze(ctx context.Context, es *elasticsearch.Client, indexName str
 		[]string{indexName},
 		strings.NewReader(cleanJsonQuery),
 		es.DeleteByQuery.WithContext(ctx),
-		es.DeleteByQuery.WithConflicts("proceed"),
-		es.DeleteByQuery.WithScrollSize(2500),
-	)
+		es.DeleteByQuery.WithConflicts("proceed"))
 	if errCleanJson == nil && resCleanJson != nil {
 		resCleanJson.Body.Close()
 		_, _ = io.Copy(io.Discard, resCleanJson.Body)
@@ -353,9 +351,7 @@ func syncAndAnalyze(ctx context.Context, es *elasticsearch.Client, indexName str
 		[]string{indexName},
 		strings.NewReader(cleaStatus0),
 		es.DeleteByQuery.WithContext(ctx),
-		es.DeleteByQuery.WithConflicts("proceed"),
-		es.DeleteByQuery.WithScrollSize(2500),
-	)
+		es.DeleteByQuery.WithConflicts("proceed"))
 	if errClean0 == nil && resClean0 != nil {
 		resClean0.Body.Close()
 		_, _ = io.Copy(io.Discard, resClean0.Body)
@@ -367,9 +363,7 @@ func syncAndAnalyze(ctx context.Context, es *elasticsearch.Client, indexName str
 		[]string{indexName},
 		strings.NewReader(cleanIpQuery),
 		es.DeleteByQuery.WithContext(ctx),
-		es.DeleteByQuery.WithConflicts("proceed"),
-		es.DeleteByQuery.WithScrollSize(2500),
-	)
+		es.DeleteByQuery.WithConflicts("proceed"))
 	if errCleanIp == nil && resCleanIp != nil {
 		_, _ = io.Copy(io.Discard, resCleanIp.Body)
 		resCleanIp.Body.Close()
@@ -463,7 +457,7 @@ func syncAndAnalyze(ctx context.Context, es *elasticsearch.Client, indexName str
 		}
 	}
 
-	query := `{"size": 1000, "query": {"match_all": {}}}`
+	query := `{"size": 2500, "query": {"match_all": {}}}`
 	res, err := es.Search(es.Search.WithContext(ctx), es.Search.WithIndex(indexName), es.Search.WithBody(strings.NewReader(query)))
 	if err != nil {
 		log.Print("Log Sudah habis")

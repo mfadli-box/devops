@@ -9,6 +9,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o main main.go
 
 # STAGE 2: Runtime Image Ringan
 FROM alpine:3.20
+RUN apk --no-cache add ca-certificates tzdata
+
 WORKDIR /app
 COPY --from=builder /app/main .
 EXPOSE 36665
