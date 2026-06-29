@@ -6,9 +6,11 @@ import (
 	"ict_rest/skeleton/dat_user"
 	"ict_rest/skeleton/ict_monitor"
 	"ict_rest/skeleton/ict_security"
+	"time"
 
 	"net/http"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/gin-gonic/gin"
 )
@@ -17,6 +19,14 @@ func SetRouter() *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	rest := gin.Default()
 	rest.SetTrustedProxies([]string{"127.0.0.1"})
+	rest.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000", "http://172.99.66.6:36666"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	rest.GET("/", func(c *gin.Context) {
 		c.Status(http.StatusOK)
@@ -46,14 +56,6 @@ func SetRouter() *gin.Engine {
 	companyR := dat_company.NRepository(db)
 	companyU := dat_company.NUseCase(companyR)
 	companyH := dat_company.NHandler(companyU)
-
-	ictMonitorR := ict_monitor.NRepository(db)
-	ictMonitorU := ict_monitor.NUseCase(ictMonitorR)
-	ictMonitorH := ict_monitor.NHandler(ictMonitorU)
-
-	ictSecurityR := ict_security.NRepository(db)
-	ictSecurityU := ict_security.NUseCase(ictSecurityR)
-	ictSecurityH := ict_security.NHandler(ictSecurityU)
 
 	rest.GET("/rest/company", companyH.PLCompany)
 	rest.POST("/rest/user/login", userH.PELogin)
@@ -85,16 +87,28 @@ func SetRouter() *gin.Engine {
 	rest.PUT("/rest/admin/company/:id", USLoad(), USLock(), USLogs("u_company"), companyH.AUCompany)
 	rest.PUT("/rest/admin/company-module/:id", USLoad(), USLock(), USLogs("u_company_module"), companyH.AUCompanyModule)
 
-	rest.GET("/rest/security/sla", USLoad(), USLock(), ictSecurityH.NLSLA)
-	rest.GET("/rest/security/waf", USLoad(), USLock(), ictSecurityH.NLWAF)
-	rest.GET("/rest/security/attack", USLoad(), USLock(), ictSecurityH.NLATC)
-	rest.GET("/rest/security/history", USLoad(), USLock(), ictSecurityH.NLLOG)
-	rest.GET("/rest/security/whitelist", USLoad(), USLock(), ictSecurityH.NLIPW)
-	rest.GET("/rest/security/blacklist", USLoad(), USLock(), ictSecurityH.NLIPB)
-	rest.POST("/rest/security/waf", USLoad(), USLock(), USLogs("c_sec_waf"), ictSecurityH.NCWAF)
-	rest.POST("/rest/security/whitelist", USLoad(), USLock(), USLogs("c_sec_whitelist"), ictSecurityH.NCIPM)
-	rest.DELETE("/rest/security/waf/:id", USLoad(), USLock(), USLogs("d_sec_waf"), ictSecurityH.NDWAF)
-	rest.DELETE("/rest/security/whitelist/:id", USLoad(), USLock(), USLogs("d_sec_whitelist"), ictSecurityH.NDIPW)
+	ictSecurityR := ict_security.NRepository(db)
+	ictSecurityU := ict_security.NUseCase(ictSecurityR)
+	ictSecurityH := ict_security.NHandler(ictSecurityU)
+
+	ictMonitorR := ict_monitor.NRepository(db)
+	ictMonitorU := ict_monitor.NUseCase(ictMonitorR)
+	ictMonitorH := ict_monitor.NHandler(ictMonitorU)
+
+	rest.GET("/rest/pages/NW01/sla", USLoad(), ictSecurityH.NLSLA)
+	rest.GET("/rest/pages/NW01/waf", USLoad(), ictSecurityH.NLWAF)
+	rest.GET("/rest/pages/NW01/attack", USLoad(), ictSecurityH.NLATC)
+	rest.GET("/rest/pages/NW01/history", USLoad(), ictSecurityH.NLLOG)
+	rest.GET("/rest/pages/NW01/whitelist", USLoad(), ictSecurityH.NLIPW)
+	rest.GET("/rest/pages/NW01/blacklist", USLoad(), ictSecurityH.NLIPB)
+	rest.POST("/rest/pages/NW01/waf", USLoad(), USLogs("c_sec_waf"), ictSecurityH.NCWAF)
+	rest.POST("/rest/pages/NW01/whitelist", USLoad(), USLogs("c_sec_whitelist"), ictSecurityH.NCIPM)
+	rest.DELETE("/rest/pages/NW01/waf/:id", USLoad(), USLogs("d_sec_waf"), ictSecurityH.NDWAF)
+	rest.DELETE("/rest/pages/NW01/whitelist/:id", USLoad(), USLogs("d_sec_whitelist"), ictSecurityH.NDIPW)
+
+	rest.GET("/rest/pages/NW02/sla", USLoad(), ictMonitorH.URSla)
+	rest.GET("/rest/pages/NW02/summary", USLoad(), ictMonitorH.URSum)
+	rest.GET("/rest/pages/NW02/detail", USLoad(), ictMonitorH.URLog)
 
 	rest.POST("/hook/uptimerobot", ictMonitorH.URHook)
 

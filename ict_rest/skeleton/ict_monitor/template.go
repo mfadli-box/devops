@@ -81,10 +81,79 @@ type UptimeAlertItem struct {
 	ResponseTime          string `form:"responsetime" json:"responsetime"`
 }
 
+/* ======================= ict_uptime_summary
+  id                 String   @id @default(uuid())
+  date               DateTime
+  domain             String
+  total_monitors     Int
+  total_downtime_sec Int      @default(0)
+  total_uptime_sec   Int      @default(0)
+  average_sla        Float
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  @@unique([date, domain])
+  @@index([domain])
+  @@index([date])
+========================== */
+
+type UptimeSum struct {
+	ID               string    `json:"id"`
+	Date             time.Time `json:"date"`
+	Domain           string    `json:"domain"`
+	TotalMonitors    int       `json:"total_monitors"`
+	TotalDowntimeSec int       `json:"total_downtime_sec"`
+	TotalUptimeSec   int       `json:"total_uptime_sec"`
+	AverageSla       float64   `json:"average_sla"`
+}
+
+/* ======================= ict_uptimerobot_sla
+  id                    String   @id @default(uuid())
+  monitor_id            Int
+  monitor_friendly_name String
+  monitor_url           String
+  date                  DateTime
+  total_downtime_sec    Int      @default(0)
+  total_uptime_sec      Int      @default(0)
+  sla_percentage        Float
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  @@unique([monitor_id, date])
+  @@index([date])
+========================== */
+
+type UptimeSla struct {
+	ID                  string    `json:"id"`
+	MonitorID           int       `json:"monitor_id"`
+	MonitorFriendlyName string    `json:"monitor_friendly_name"`
+	MonitorURL          string    `json:"monitor_url"`
+	Date                time.Time `json:"date"`
+	TotalDowntimeSec    int       `json:"total_downtime_sec"`
+	TotalUptimeSec      int       `json:"total_uptime_sec"`
+	SlaPercentage       float64   `json:"sla_percentage"`
+}
+
+type FilterParams struct {
+	StartDate string `form:"start_date"`
+	EndDate   string `form:"end_date"`
+	Domain    string `form:"domain"`
+	MonitorID int    `form:"monitor_id"`
+	Page      int    `form:"page"`
+	Limit     int    `form:"limit"`
+}
+
 type Repository interface {
 	URHook(ctx context.Context, item UptimeAlertInfo) error
+	URHookSla(ctx context.Context, targetDate time.Time, monitorID int, monitorURL string, friendlyName string) error
+	URLog(ctx context.Context, f FilterParams) ([]UptimeAlertInfo, int, error)
+	URSla(ctx context.Context, f FilterParams) ([]UptimeSla, int, error)
+	URSum(ctx context.Context, f FilterParams) ([]UptimeSum, int, error)
 }
 
 type UseCase interface {
 	URHook(ctx context.Context, req UptimeAlertItem) error
+	URLog(ctx context.Context, f FilterParams) (map[string]interface{}, error)
+	URSla(ctx context.Context, f FilterParams) (map[string]interface{}, error)
+	URSum(ctx context.Context, f FilterParams) (map[string]interface{}, error)
 }

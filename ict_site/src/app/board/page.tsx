@@ -219,11 +219,11 @@ export default function BoardPage() {
   const [boardData, setBoardData] = useState<BoardData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
-  const [mn01PostForm, setMn01PostForm] = useState({
+  const [nw01PostForm, setNw01PostForm] = useState({
     title: "",
     note: "",
   });
-  const [mn01PostRows, setMn01PostRows] = useState<Array<{ id: string; title: string; note: string; createdAt: string }>>([]);
+  const [nw01PostRows, setNw01PostRows] = useState<Array<{ id: string; title: string; note: string; createdAt: string }>>([]);
 
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [activeProfileTab, setActiveProfileTab] = useState<ProfileTab>("info");
@@ -436,11 +436,11 @@ export default function BoardPage() {
     return selectedModule ? findNode(boardData?.modules ?? []) : null;
   }, [selectedModule, boardData]);
 
-  const isMN01Module = useMemo(() => {
+  const isNW01Module = useMemo(() => {
     if (!selectedModuleNode) return false;
     const code = (selectedModuleNode.code || "").trim().toUpperCase();
     const path = (selectedModuleNode.path || "").trim().toUpperCase();
-    return code === "MN01" || path === "MN01";
+    return code === "NW01" || path === "NW01";
   }, [selectedModuleNode]);
 
   const moduleBreadcrumb = useMemo(() => {
@@ -841,7 +841,7 @@ export default function BoardPage() {
       return;
     }
     const headers = { Authorization: `Bearer ${session.token}` };
-    const res = await axios.get("/api/admin/company-module", { headers, params: { company_id: companyID } });
+    const res = await axios.get("/api/admin/company_module", { headers, params: { company_id: companyID } });
     const rows = Array.isArray(res.data?.data)
       ? res.data.data.map((item: Partial<AdminCompanyModuleAccess>) => ({
           id: item.id ?? "",
@@ -870,10 +870,10 @@ export default function BoardPage() {
         is_active: normalizeBool(companyModuleAccessForm.is_active),
       };
       if (companyModuleAccessForm.id) {
-        await axios.put("/api/admin/company-module", payload, { headers });
+        await axios.put("/api/admin/company_module", payload, { headers });
         setAdminMessage("Hak akses perusahaan berhasil diperbarui.");
       } else {
-        await axios.post("/api/admin/company-module", payload, { headers });
+        await axios.post("/api/admin/company_module", payload, { headers });
         setAdminMessage("Hak akses perusahaan berhasil ditambahkan.");
       }
       setCompanyModuleAccessForm({ id: "", module_id: "", is_active: true });
@@ -894,7 +894,7 @@ export default function BoardPage() {
     }
 
     const headers = { Authorization: `Bearer ${session.token}` };
-    const res = await axios.get("/api/admin/user-company", { headers, params: { user_id: userID } });
+    const res = await axios.get("/api/admin/user_company", { headers, params: { user_id: userID } });
     const rows: AdminUserCompanyAccess[] = Array.isArray(res.data?.data)
       ? res.data.data.map((item: Partial<AdminUserCompanyAccess>) => ({
           id: item.id ?? "",
@@ -926,12 +926,12 @@ export default function BoardPage() {
       return;
     }
     const headers = { Authorization: `Bearer ${session.token}` };
-    const res = await axios.get("/api/admin/user-privilege", { headers, params: { user_company_id: userCompanyID } });
+    const res = await axios.get("/api/admin/user_privilege", { headers, params: { user_company_id: userCompanyID } });
     setUserPrivilegeAccessRows(Array.isArray(res.data?.data) ? res.data.data : []);
 
     const selectedCompanyID = userCompanyAccessRows.find((item) => item.id === userCompanyID)?.company_id || "";
     if (selectedCompanyID) {
-      const companyModuleRes = await axios.get("/api/admin/company-module", { headers, params: { company_id: selectedCompanyID } });
+      const companyModuleRes = await axios.get("/api/admin/company_module", { headers, params: { company_id: selectedCompanyID } });
       const rows = Array.isArray(companyModuleRes.data?.data)
         ? companyModuleRes.data.data.map((item: Partial<AdminCompanyModuleAccess>) => ({
             id: item.id ?? "",
@@ -967,10 +967,10 @@ export default function BoardPage() {
         is_active: normalizeBool(userCompanyAccessForm.is_active),
       };
       if (userCompanyAccessForm.id) {
-        await axios.put("/api/admin/user-company", payload, { headers });
+        await axios.put("/api/admin/user_company", payload, { headers });
         setAdminMessage("Akses perusahaan pengguna berhasil diperbarui.");
       } else {
-        await axios.post("/api/admin/user-company", payload, { headers });
+        await axios.post("/api/admin/user_company", payload, { headers });
         setAdminMessage("Akses perusahaan pengguna berhasil ditambahkan.");
       }
       await fetchUserCompanyAccess(userAdminForm.id);
@@ -1003,10 +1003,10 @@ export default function BoardPage() {
         level: userPrivilegeAccessForm.level,
       };
       if (userPrivilegeAccessForm.id) {
-        await axios.put("/api/admin/user-privilege", payload, { headers });
+        await axios.put("/api/admin/user_privilege", payload, { headers });
         setAdminMessage("Hak akses modul pengguna berhasil diperbarui.");
       } else {
-        await axios.post("/api/admin/user-privilege", payload, { headers });
+        await axios.post("/api/admin/user_privilege", payload, { headers });
         setAdminMessage("Hak akses modul pengguna berhasil ditambahkan.");
       }
       setUserPrivilegeAccessForm({ id: "", user_company_id: selectedUserCompanyAccess, module_id: "", level: "hide" });
@@ -1163,14 +1163,14 @@ export default function BoardPage() {
     }
   };
 
-  const handleMN01Submit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleNW01Submit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedModuleNode || selectedModuleNode.level !== "post") return;
-    const title = mn01PostForm.title.trim();
-    const note = mn01PostForm.note.trim();
+    const title = nw01PostForm.title.trim();
+    const note = nw01PostForm.note.trim();
     if (!title || !note) return;
 
-    setMn01PostRows((prev) => [
+    setNw01PostRows((prev) => [
       {
         id: `${Date.now()}`,
         title,
@@ -1180,7 +1180,7 @@ export default function BoardPage() {
       ...prev,
     ]);
 
-    setMn01PostForm({ title: "", note: "" });
+    setNw01PostForm({ title: "", note: "" });
   };
 
   useEffect(() => {
@@ -1612,22 +1612,22 @@ export default function BoardPage() {
             <div className="space-y-6">
               <div className="rounded-1xl border border-slate-200 bg-white p-6 shadow-sm">
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-500">{selectedModuleNode.path} - {selectedModuleNode.title}</p>
-                {isMN01Module ? (
+                {isNW01Module ? (
                   <>
                     {selectedModuleNode.level === "hide" ? (
                       <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-                        Anda tidak memiliki akses ke modul MN01 (level: hide).
+                        Anda tidak memiliki akses ke modul NW01 (level: hide).
                       </div>
                     ) : null}
 
                     {selectedModuleNode.level === "view" ? (
                       <div className="mt-3 space-y-4">
                         <div className="flex items-center justify-between rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
-                          <span>Modul MN01 sedang berjalan dalam mode baca.</span>
+                          <span>Modul NW01 sedang berjalan dalam mode baca.</span>
                           <span className="rounded-full bg-sky-100 px-2 py-1 text-xs font-semibold tracking-wide text-sky-700">VIEW</span>
                         </div>
                         <div className="rounded-xl border border-slate-200 p-4">
-                          <p className="mb-2 text-sm font-semibold text-slate-900">Contoh Konten MN01 (Read Only)</p>
+                          <p className="mb-2 text-sm font-semibold text-slate-900">Contoh Konten NW01 (Read Only)</p>
                           <div className="overflow-hidden rounded-xl border border-slate-200">
                             <table className="min-w-full divide-y divide-slate-200 text-sm">
                               <thead className="bg-slate-50">
@@ -1658,29 +1658,29 @@ export default function BoardPage() {
                     {selectedModuleNode.level === "post" ? (
                       <div className="mt-3 space-y-4">
                         <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                          <span>Modul MN01 aktif dalam mode input data.</span>
+                          <span>Modul NW01 aktif dalam mode input data.</span>
                           <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold tracking-wide text-emerald-700">POST</span>
                         </div>
-                        <form className="grid gap-3 rounded-xl border border-slate-200 p-4" onSubmit={handleMN01Submit}>
+                        <form className="grid gap-3 rounded-xl border border-slate-200 p-4" onSubmit={handleNW01Submit}>
                           <label className="grid gap-1 text-sm text-slate-700">
                             <span>Judul Catatan Monitoring</span>
                             <input
-                              value={mn01PostForm.title}
-                              onChange={(e) => setMn01PostForm((prev) => ({ ...prev, title: e.target.value }))}
+                              value={nw01PostForm.title}
+                              onChange={(e) => setNw01PostForm((prev) => ({ ...prev, title: e.target.value }))}
                               className="rounded-xl border border-slate-200 px-3 py-2"
                             />
                           </label>
                           <label className="grid gap-1 text-sm text-slate-700">
                             <span>Catatan</span>
                             <textarea
-                              value={mn01PostForm.note}
-                              onChange={(e) => setMn01PostForm((prev) => ({ ...prev, note: e.target.value }))}
+                              value={nw01PostForm.note}
+                              onChange={(e) => setNw01PostForm((prev) => ({ ...prev, note: e.target.value }))}
                               className="min-h-24 rounded-xl border border-slate-200 px-3 py-2"
                             />
                           </label>
                           <div className="flex gap-2">
                             <button type="submit" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Simpan Catatan</button>
-                            <button type="button" onClick={() => setMn01PostForm({ title: "", note: "" })} className="rounded-xl border border-slate-200 px-4 py-2 text-sm">Reset</button>
+                            <button type="button" onClick={() => setNw01PostForm({ title: "", note: "" })} className="rounded-xl border border-slate-200 px-4 py-2 text-sm">Reset</button>
                           </div>
                         </form>
 
@@ -1694,12 +1694,12 @@ export default function BoardPage() {
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 bg-white">
-                              {mn01PostRows.length === 0 ? (
+                              {nw01PostRows.length === 0 ? (
                                 <tr>
                                   <td colSpan={3} className="px-3 py-4 text-center text-slate-500">Belum ada catatan monitoring.</td>
                                 </tr>
                               ) : (
-                                mn01PostRows.map((row) => (
+                                nw01PostRows.map((row) => (
                                   <tr key={row.id}>
                                     <td className="px-3 py-2">{formatDateTime(row.createdAt)}</td>
                                     <td className="px-3 py-2">{row.title}</td>

@@ -47,34 +47,34 @@ func (u *useCase) NCIPM(ctx context.Context, ip, desc string) error {
 
 	wUUID := uuid.NewString()
 	if err := u.repo.NCIPW(ctx, tx, wUUID, ip, desc); err != nil {
-		log.Printf("Gagal insert whitelist IP %s: %v", ip, err)
+		log.Printf("Gagal insert whitelist IP %s %v", ip, err)
 		return err
 	}
 
 	modifiers, err := u.repo.XGATCDate(ctx, tx, ip)
 	if err != nil {
-		log.Printf("Gagal kalkulasi riwayat tanggal IP %s: %v", ip, err)
+		log.Printf("Gagal kalkulasi riwayat tanggal IP %s  %v", ip, err)
 		return err
 	}
 
 	if _, err := u.repo.XMLOGSIp(ctx, tx, ip); err != nil {
-		log.Printf("Gagal pemindahan log IP %s ke ict_nginx_app: %v", ip, err)
+		log.Printf("Gagal pemindahan log IP %s ke ict_nginx_app %v", ip, err)
 		return err
 	}
 
 	if err := u.repo.XDLOGSAtcIp(ctx, tx, ip); err != nil {
-		log.Printf("Gagal hapus log serangan lama IP %s: %v", ip, err)
+		log.Printf("Gagal hapus log serangan lama IP %s %v", ip, err)
 		return err
 	}
 
 	if err := u.repo.XDLOGSSum(ctx, tx, ip); err != nil {
-		log.Printf("Gagal hapus summary IP %s: %v", ip, err)
+		log.Printf("Gagal hapus summary IP %s %v", ip, err)
 		return err
 	}
 
 	for _, mod := range modifiers {
 		if err := u.repo.XUSLASum(ctx, tx, mod.LogCount, mod.Date); err != nil {
-			log.Printf("Gagal update SLA harian %s: %v", mod.Date, err)
+			log.Printf("Gagal update SLA harian %s %v", mod.Date, err)
 			continue
 		}
 		_ = u.repo.XUSLAPct(ctx, tx, mod.Date)
@@ -95,7 +95,11 @@ func (u *useCase) NCWAF(ctx context.Context, req WAFItem) error {
 	defer tx.Rollback()
 
 	ruleID := uuid.NewString()
-	if err := u.repo.NCWAF(ctx, tx, ruleID, req.Domain, req.URLPath, req.ArgsPattern, req.Description); err != nil {
+	if err := u.repo.NCWAF(ctx, tx, ruleID,
+		req.Domain,
+		req.URLPath,
+		req.ArgsPattern,
+		req.Description); err != nil {
 		log.Printf("Gagal mendaftarkan aturan WAF: %v", err)
 		return err
 	}
@@ -111,7 +115,7 @@ func (u *useCase) NCWAF(ctx context.Context, req WAFItem) error {
 		log.Printf("Gagal sinkronisasi log untuk migrasi: %v", err)
 		return err
 	}
-	log.Printf("Berhasil memigrasikan %d log yang sesuai dengan kriteria aturan ke ict_nginx_app.", migratedRows)
+	log.Printf("Berhasil memigrasikan %d log - ict_nginx_app.", migratedRows)
 
 	if err := u.repo.XDLOGSAtcArg(ctx, tx, req.Domain, req.URLPath, req.ArgsPattern); err != nil {
 		log.Printf("Gagal menghapus alert false-positive lama dari ict_nginx_atc: %v", err)
@@ -120,7 +124,7 @@ func (u *useCase) NCWAF(ctx context.Context, req WAFItem) error {
 
 	for _, mod := range modifiers {
 		if err := u.repo.XUSLASum(ctx, tx, mod.LogCount, mod.Date); err != nil {
-			log.Printf("Gagal penyesuaian SLA dinamis untuk tanggal %s: %v", mod.Date, err)
+			log.Printf("Gagal penyesuaian SLA dinamis untuk tanggal %s %v", mod.Date, err)
 			continue
 		}
 		_ = u.repo.XUSLAPct(ctx, tx, mod.Date)

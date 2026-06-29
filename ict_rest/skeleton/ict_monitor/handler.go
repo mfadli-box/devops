@@ -1,7 +1,6 @@
 package ict_monitor
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -20,7 +19,7 @@ func (h *Handler) URHook(c *gin.Context) {
 
 	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": errors.New("Format request tidak valid"),
+			"error": "Format request tidak valid",
 		})
 		return
 	}
@@ -28,11 +27,54 @@ func (h *Handler) URHook(c *gin.Context) {
 	ctx := c.Request.Context()
 	if err := h.usecase.URHook(ctx, req); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": errors.New("Gagal menyimpan alert"),
+			"error": "Gagal menyimpan alert",
 		})
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Data berhasil disimpan",
 	})
+}
+
+func (h *Handler) URLog(c *gin.Context) {
+	var filter FilterParams
+	_ = c.ShouldBindQuery(&filter)
+
+	res, err := h.usecase.URLog(c.Request.Context(), filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Gagal mengambil detail log",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func (h *Handler) URSla(c *gin.Context) {
+	var filter FilterParams
+	_ = c.ShouldBindQuery(&filter)
+
+	res, err := h.usecase.URSla(c.Request.Context(), filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Gagal mengambil data SLA harian",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func (h *Handler) URSum(c *gin.Context) {
+	var filter FilterParams
+	_ = c.ShouldBindQuery(&filter)
+
+	res, err := h.usecase.URSum(c.Request.Context(), filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Gagal mengambil data summary domain",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, res)
 }

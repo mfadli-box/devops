@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"regexp"
 	"runtime"
 	"runtime/debug"
@@ -113,11 +114,11 @@ func InitDB(connStr string) {
 	var err error
 	PgSQL, err = sql.Open("postgres", connStr)
 	if err != nil {
-		log.Fatalf("Gagal koneksi ke Basis data: %v", err)
+		log.Fatalf("Gagal koneksi ke Basis data : %v", err)
 	}
 
 	if err = PgSQL.Ping(); err != nil {
-		log.Fatalf("Basis data tidak merespon Ping: %v", err)
+		log.Fatalf("Basis data tidak merespon Ping : %v", err)
 	}
 }
 
@@ -167,12 +168,22 @@ func IsWhitelistedDB(db *sql.DB, ipStr string) bool {
 	}
 
 	var exists bool
-	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM ict_ip_whitelist WHERE ip_or_cidr = $1)", ipStr).Scan(&exists)
+	query_a := `
+		SELECT EXISTS(
+			SELECT 1 FROM "ict_ip_whitelist"
+			WHERE  ip_or_cidr = $1
+		)`
+	err := db.QueryRow(query_a, ipStr).Scan(&exists)
 	if err == nil && exists {
 		return true
 	}
 
-	rows, err := db.Query("SELECT ip_or_cidr FROM ict_ip_whitelist WHERE ip_or_cidr LIKE '%/%'")
+	query_b := `
+		SELECT	ip_or_cidr
+		FROM	"ict_ip_whitelist"
+		WHERE	ip_or_cidr LIKE '%/%'
+	`
+	rows, err := db.Query(query_b)
 	if err != nil {
 		log.Printf("Gagal membaca ict_ip_whitelist : %v", err)
 		return false
@@ -307,13 +318,13 @@ func StartSyncWorker(es *elasticsearch.Client, threshold int) {
 func runSyncTask(es *elasticsearch.Client, threshold int) {
 	ctx := context.Background()
 	now := time.Now()
+	eod := now.AddDate(0, 0, -1)
+	beforeIndex := fmt.Sprintf("logstash_%s", eod.Format("2006.01.02"))
 	currentIndex := fmt.Sprintf("logstash_%s", now.Format("2006.01.02"))
 
-	log.Printf("[%s] Sinkronisasi ...", now.Format("15:04:05"))
-	syncAndAnalyze(ctx, es, currentIndex, now, threshold)
-	cleanupOldIndices(ctx, es, now)
-	runtime.GC()
-	debug.FreeOSMemory()
+	syncAndAnalyze(ctx, es, beforeIndex, eod, threshold)
+	syncAndAnalyze(ctx, es, currentIndex, eod, threshold)
+	cleanupOldIndices(ctx, es, eod)
 }
 
 func IsBypassedRuleDB(db *sql.DB, domain, urlPath, args string) bool {
@@ -333,8 +344,28 @@ func IsBypassedRuleDB(db *sql.DB, domain, urlPath, args string) bool {
 	return count > 0
 }
 
+func restartSelf() {
+	self, err := os.Executable()
+	if err != nil {
+		log.Fatalf("Gagal menemukan path binary: %v", err)
+	}
+	cmd := exec.Command(self, os.Args[1:]...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = os.Environ()
+	err = cmd.Start()
+	if err != nil {
+		log.Fatalf("Gagal memulai ulang aplikasi : %v", err)
+	}
+	os.Exit(0)
+}
+
 func syncAndAnalyze(ctx context.Context, es *elasticsearch.Client, indexName string, now time.Time, threshold int) {
-	cleanJsonQuery := `{"query": {"bool": {"must": {"match": {"error.message": "Error decoding JSON: invalid character 'x' in string escape code"}}}}}`
+	cleanJsonQuery := `{
+		"query": {"bool": {"must": {"match": {
+			"error.message": "Error decoding JSON: invalid character 'x' in string escape code"
+		}}}}
+	}`
 	resCleanJson, errCleanJson := es.DeleteByQuery(
 		[]string{indexName},
 		strings.NewReader(cleanJsonQuery),
@@ -346,10 +377,10 @@ func syncAndAnalyze(ctx context.Context, es *elasticsearch.Client, indexName str
 		resCleanJson.Body.Close()
 	}
 
-	cleaStatus0 := `{"query": {"match": {"status": "0"}}}`
+	cleanStatus0 := `{"query": {"match": {"status": "0"}}}`
 	resClean0, errClean0 := es.DeleteByQuery(
 		[]string{indexName},
-		strings.NewReader(cleaStatus0),
+		strings.NewReader(cleanStatus0),
 		es.DeleteByQuery.WithContext(ctx),
 		es.DeleteByQuery.WithConflicts("proceed"))
 	if errClean0 == nil && resClean0 != nil {
@@ -358,7 +389,13 @@ func syncAndAnalyze(ctx context.Context, es *elasticsearch.Client, indexName str
 		resClean0.Body.Close()
 	}
 
-	cleanIpQuery := `{"query": {"bool": {"should": [{"term": {"client_ip": ""}}, {"bool": {"must_not": {"exists": {"field": "client_ip"}}}}], "minimum_should_match": 1}}}`
+	cleanIpQuery := `{
+		"query": {"bool": {"should": [
+			{"term": {"client_ip": ""}},
+			{"bool": {"must_not": {"exists": {"field": "client_ip"}}}}
+		],
+		"minimum_should_match": 1}}
+	}`
 	resCleanIp, errCleanIp := es.DeleteByQuery(
 		[]string{indexName},
 		strings.NewReader(cleanIpQuery),
@@ -371,13 +408,16 @@ func syncAndAnalyze(ctx context.Context, es *elasticsearch.Client, indexName str
 
 	queryFindDates := `
 		SELECT DISTINCT date_str FROM (
-			SELECT DISTINCT TO_CHAR(timestamp, 'YYYY-MM-DD') AS date_str FROM ict_nginx_log WHERE client_ip = ''
+			SELECT	DISTINCT TO_CHAR(timestamp, 'YYYY-MM-DD') AS date_str
+			FROM	"ict_nginx_log" WHERE client_ip = ''
 			UNION
-			SELECT DISTINCT TO_CHAR(timestamp, 'YYYY-MM-DD') AS date_str FROM ict_nginx_app WHERE client_ip = ''
+			SELECT	DISTINCT TO_CHAR(timestamp, 'YYYY-MM-DD') AS date_str
+			FROM	"ict_nginx_app" WHERE client_ip = ''
 			UNION
-			SELECT DISTINCT TO_CHAR(timestamp, 'YYYY-MM-DD') AS date_str FROM ict_nginx_atc WHERE client_ip = ''
-		) t WHERE date_str IS NOT NULL`
-
+			SELECT	DISTINCT TO_CHAR(timestamp, 'YYYY-MM-DD') AS date_str
+			FROM	"ict_nginx_atc" WHERE client_ip = ''
+		) t WHERE date_str IS NOT NULL
+	`
 	rowsDates, errDates := PgSQL.QueryContext(ctx, queryFindDates)
 	if errDates == nil {
 		var affectedDates []string
@@ -390,7 +430,7 @@ func syncAndAnalyze(ctx context.Context, es *elasticsearch.Client, indexName str
 		rowsDates.Close()
 
 		if len(affectedDates) > 0 {
-			log.Printf("[%d] Memulai pembersihan data client_ip kosong ...", len(affectedDates))
+			log.Printf("Log %s Membersihkan client_ip - %d ", indexName, len(affectedDates))
 
 			txClean, errTxClean := PgSQL.BeginTx(ctx, nil)
 			if errTxClean == nil {
@@ -398,10 +438,22 @@ func syncAndAnalyze(ctx context.Context, es *elasticsearch.Client, indexName str
 				for _, dateStr := range affectedDates {
 					_, _ = txClean.ExecContext(ctx, "SAVEPOINT clean_date_save")
 
-					_, err1 := txClean.ExecContext(ctx, "DELETE FROM ict_nginx_log WHERE client_ip = '' AND TO_CHAR(timestamp, 'YYYY-MM-DD') = $1", dateStr)
-					_, err2 := txClean.ExecContext(ctx, "DELETE FROM ict_nginx_app WHERE client_ip = '' AND TO_CHAR(timestamp, 'YYYY-MM-DD') = $1", dateStr)
-					_, err3 := txClean.ExecContext(ctx, "DELETE FROM ict_nginx_atc WHERE client_ip = '' AND TO_CHAR(timestamp, 'YYYY-MM-DD') = $1", dateStr)
-					_, err4 := txClean.ExecContext(ctx, "DELETE FROM ict_nginx_atc_sum WHERE client_ip = '' AND date = $1", dateStr)
+					_, err1 := txClean.ExecContext(ctx, `
+						DELETE FROM "ict_nginx_log"
+						WHERE client_ip = '' AND TO_CHAR(timestamp, 'YYYY-MM-DD') = $1
+					`, dateStr)
+					_, err2 := txClean.ExecContext(ctx, `
+						DELETE FROM "ict_nginx_app"
+						WHERE client_ip = '' AND TO_CHAR(timestamp, 'YYYY-MM-DD') = $1
+					`, dateStr)
+					_, err3 := txClean.ExecContext(ctx, `
+						DELETE FROM "ict_nginx_atc"
+						WHERE client_ip = '' AND TO_CHAR(timestamp, 'YYYY-MM-DD') = $1
+					`, dateStr)
+					_, err4 := txClean.ExecContext(ctx, `
+						DELETE FROM "ict_nginx_atc_sum"
+						WHERE client_ip = '' AND date = $1
+					`, dateStr)
 
 					if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
 						_, _ = txClean.ExecContext(ctx, "ROLLBACK TO SAVEPOINT clean_date_save")
@@ -413,31 +465,39 @@ func syncAndAnalyze(ctx context.Context, es *elasticsearch.Client, indexName str
 							SELECT 
 								COUNT(*) AS total,
 								COUNT(CASE WHEN (status::int >= 200 AND status::int < 300) AND (traffic_type = 'NORMAL' OR traffic_type = 'WHITELISTED_TRAFFIC') THEN 1 END) AS success,
-								COUNT(CASE WHEN status::int >= 400 AND status::int < 500 THEN 1 END) AS client_err,
-								COUNT(CASE WHEN status::int >= 500 THEN 1 END) AS server_err,
+								COUNT(CASE WHEN  status::int >= 400 AND status::int < 500 THEN 1 END) AS client_err,
+								COUNT(CASE WHEN  status::int >= 500 THEN 1 END) AS server_err,
 								COALESCE(AVG(NULLIF(responsetime, '')::numeric), 0.0000) AS avg_time
 							FROM (
-								SELECT timestamp, status, traffic_type, responsetime FROM ict_nginx_log WHERE TO_CHAR(timestamp, 'YYYY-MM-DD') = $1
+								SELECT timestamp, status, traffic_type, responsetime
+								FROM	"ict_nginx_log"
+								WHERE	TO_CHAR(timestamp, 'YYYY-MM-DD') = $1
 								UNION ALL
-								SELECT timestamp, status, traffic_type, responsetime FROM ict_nginx_app WHERE TO_CHAR(timestamp, 'YYYY-MM-DD') = $1
+								SELECT	timestamp, status, traffic_type, responsetime
+								FROM	"ict_nginx_app"
+								WHERE	TO_CHAR(timestamp, 'YYYY-MM-DD') = $1
 								UNION ALL
-								SELECT timestamp, status, traffic_type, responsetime FROM ict_nginx_atc WHERE TO_CHAR(timestamp, 'YYYY-MM-DD') = $1
+								SELECT timestamp, status, traffic_type, responsetime
+								FROM	"ict_nginx_atc"
+								WHERE	TO_CHAR(timestamp, 'YYYY-MM-DD') = $1
 							) combined
 						),
 						attack_metrics AS (
-							SELECT COUNT(*) AS total_attacks FROM ict_nginx_atc WHERE TO_CHAR(timestamp, 'YYYY-MM-DD') = $1
+							SELECT	COUNT(*) AS total_attacks
+							FROM	"ict_nginx_atc"
+							WHERE	TO_CHAR(timestamp, 'YYYY-MM-DD') = $1
 						)
-						UPDATE ict_nginx_sla s
-						SET 
-							total_requests = m.total,
-							successful_requests = m.success,
-							client_errors = m.client_err,
-							server_errors = m.server_err,
-							attack_requests = a.total_attacks,
-							avg_response_time = m.avg_time,
-							sla_percentage = CASE WHEN m.total > 0 THEN (m.success::numeric / m.total::numeric) * 100 ELSE 0.00 END
-						FROM metrics m, attack_metrics a
-						WHERE s.date = $1
+						UPDATE	"ict_nginx_sla" s
+						SET		total_requests = m.total,
+								successful_requests = m.success,
+								client_errors = m.client_err,
+								server_errors = m.server_err,
+								attack_requests = a.total_attacks,
+								avg_response_time = m.avg_time,
+								sla_percentage = CASE WHEN m.total > 0
+							THEN (m.success::numeric / m.total::numeric) * 100 ELSE 0.00 END
+						FROM	metrics m, attack_metrics a
+						WHERE	s.date = $1
 					`
 					if _, errSLA := txClean.ExecContext(ctx, queryUpdateSLA, dateStr); errSLA != nil {
 						_, _ = txClean.ExecContext(ctx, "ROLLBACK TO SAVEPOINT clean_date_save")
@@ -449,7 +509,7 @@ func syncAndAnalyze(ctx context.Context, es *elasticsearch.Client, indexName str
 
 				if cleanSuccess {
 					_ = txClean.Commit()
-					log.Println("SLA diperbarui.")
+					log.Printf("Log %s SLA diperbarui.", indexName)
 				} else {
 					txClean.Rollback()
 				}
@@ -458,15 +518,18 @@ func syncAndAnalyze(ctx context.Context, es *elasticsearch.Client, indexName str
 	}
 
 	query := `{"size": 2500, "query": {"match_all": {}}}`
-	res, err := es.Search(es.Search.WithContext(ctx), es.Search.WithIndex(indexName), es.Search.WithBody(strings.NewReader(query)))
+	res, err := es.Search(
+		es.Search.WithContext(ctx),
+		es.Search.WithIndex(indexName),
+		es.Search.WithBody(strings.NewReader(query)))
 	if err != nil {
-		log.Print("Log Sudah habis")
+		restartSelf()
 		return
 	}
 	defer res.Body.Close()
 
 	if res.IsError() {
-		log.Printf("Balikan Gagal Dari Elasticsearch : %s", res.Status())
+		log.Printf("Log %s Kosong ", indexName)
 		return
 	}
 
@@ -507,9 +570,14 @@ func syncAndAnalyze(ctx context.Context, es *elasticsearch.Client, indexName str
 
 	queryInsertNormal := `
 		INSERT INTO "ict_nginx_log" (
-			id, timestamp, host, server_ip, client_ip, country_iso, xff, domain, url, referer, args, upstreamtime, responsetime,
-			request_method, status, size, request_body, request_length, protocol, upstreamhost, file_dir, http_user_agent, traffic_type
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`
+			id, timestamp, host, server_ip, client_ip, country_iso, xff, domain, url,
+			referer, args, upstreamtime, responsetime, request_method, status, size,
+			request_body, request_length, protocol, upstreamhost, file_dir,
+			http_user_agent, traffic_type
+		) VALUES (
+		 	$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+			$16, $17, $18, $19, $20, $21, $22, $23
+		)`
 	stmtNormal, err := tx.PrepareContext(ctx, queryInsertNormal)
 	if err != nil {
 		log.Printf("Gagal Mencatat Riwayat Normal : %v", err)
@@ -519,9 +587,13 @@ func syncAndAnalyze(ctx context.Context, es *elasticsearch.Client, indexName str
 
 	queryInsertAttack := `
 		INSERT INTO "ict_nginx_atc" (
-			id, timestamp, host, server_ip, client_ip, country_iso, xff, domain, url, referer, args, upstreamtime, responsetime,
-			request_method, status, size, request_body, request_length, protocol, upstreamhost, file_dir, http_user_agent, traffic_type
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`
+			id, timestamp, host, server_ip, client_ip, country_iso, xff, domain, url,
+			referer, args, upstreamtime, responsetime, request_method, status, size,
+			request_body, request_length, protocol, upstreamhost, file_dir,
+			http_user_agent, traffic_type
+		) VALUES (
+		 	$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+			$16, $17, $18, $19, $20, $21, $22, $23)`
 	stmtAttack, err := tx.PrepareContext(ctx, queryInsertAttack)
 	if err != nil {
 		log.Printf("Gagal Mencatat Riwayat Serangan : %v", err)
@@ -531,9 +603,13 @@ func syncAndAnalyze(ctx context.Context, es *elasticsearch.Client, indexName str
 
 	queryInsertApp := `
 		INSERT INTO "ict_nginx_app" (
-			id, timestamp, host, server_ip, client_ip, country_iso, xff, domain, url, referer, args, upstreamtime, responsetime,
-			request_method, status, size, request_body, request_length, protocol, upstreamhost, file_dir, http_user_agent, traffic_type
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`
+			id, timestamp, host, server_ip, client_ip, country_iso, xff, domain, url,
+			referer, args, upstreamtime, responsetime, request_method, status, size,
+			request_body, request_length, protocol, upstreamhost, file_dir,
+			http_user_agent, traffic_type
+		) VALUES (
+		 	$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+			$16, $17, $18, $19, $20, $21, $22, $23)`
 	stmtApp, err := tx.PrepareContext(ctx, queryInsertApp)
 	if err != nil {
 		log.Printf("Gagal Mencatat Riwayat Whitelist : %v", err)
@@ -576,7 +652,11 @@ func syncAndAnalyze(ctx context.Context, es *elasticsearch.Client, indexName str
 		if totalHitByIP > threshold {
 			trafficType = "HTTP_FLOOD"
 		} else {
-			trafficType = ClassifyTraffic(logData.URL, logData.Args, logData.RequestBody, logData.UserAgent)
+			trafficType = ClassifyTraffic(
+				logData.URL,
+				logData.Args,
+				logData.RequestBody,
+				logData.UserAgent)
 		}
 
 		batchTotal++
@@ -663,19 +743,21 @@ func syncAndAnalyze(ctx context.Context, es *elasticsearch.Client, indexName str
 
 	if len(batchAttackSummary) > 0 {
 		stmtSummary, err := tx.PrepareContext(ctx, `
-		INSERT INTO ict_nginx_atc_sum (
+		INSERT INTO "ict_nginx_atc_sum" (
 			id, date, client_ip, traffic_type, target_domain, total_hits, last_seen
 		) VALUES ($1, $2, $3, $4, $5, $6, NOW())
 		 ON CONFLICT (date, client_ip, traffic_type, target_domain)
 		 DO UPDATE SET
-		 total_hits = ict_nginx_atc_sum.total_hits + EXCLUDED.total_hits, last_seen = NOW();
+		 total_hits = "ict_nginx_atc_sum".total_hits + EXCLUDED.total_hits,
+		 last_seen = NOW();
 		`)
 		if err == nil {
 			for k, hits := range batchAttackSummary {
 				_, _ = tx.ExecContext(ctx, "SAVEPOINT atc_sum_save")
 
 				sumUUID := uuid.NewString()
-				_, errExec := stmtSummary.ExecContext(ctx, sumUUID, todayStr, k.ClientIP, k.TrafficType, k.Domain, hits)
+				_, errExec := stmtSummary.ExecContext(ctx,
+					sumUUID, todayStr, k.ClientIP, k.TrafficType, k.Domain, hits)
 				if errExec != nil {
 					log.Printf("Gagal Memperbarui ringkasan untuk IP %s (Dilewati): %v", k.ClientIP, errExec)
 					_, _ = tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT atc_sum_save")
@@ -691,25 +773,27 @@ func syncAndAnalyze(ctx context.Context, es *elasticsearch.Client, indexName str
 
 		slaUUID := uuid.NewString()
 		_, err = tx.ExecContext(ctx, `
-		INSERT INTO ict_nginx_sla (
-			id, date, total_requests, successful_requests, client_errors, server_errors, attack_requests,
-			avg_response_time, sla_percentage
+		INSERT INTO "ict_nginx_sla" (
+			id, date, total_requests, successful_requests, client_errors, server_errors,
+			attack_requests, avg_response_time, sla_percentage
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0.00)
 		ON CONFLICT (date) DO UPDATE SET
-			total_requests = ict_nginx_sla.total_requests + EXCLUDED.total_requests,
-			successful_requests = ict_nginx_sla.successful_requests + EXCLUDED.successful_requests,
-			client_errors = ict_nginx_sla.client_errors + EXCLUDED.client_errors,
-			server_errors = ict_nginx_sla.server_errors + EXCLUDED.server_errors,
-			attack_requests = ict_nginx_sla.attack_requests + EXCLUDED.attack_requests,
-			avg_response_time = ((ict_nginx_sla.avg_response_time * ict_nginx_sla.total_requests) + $9) / (ict_nginx_sla.total_requests + EXCLUDED.total_requests);
-		`, slaUUID, todayStr, batchTotal, batchSuccess, batchClientErr, batchServerErr, batchAttack, avgTime, totalResponseTime) // Geser indeks parameter totalResponseTime menjadi $9
+			total_requests = "ict_nginx_sla".total_requests + EXCLUDED.total_requests,
+			successful_requests = "ict_nginx_sla".successful_requests + EXCLUDED.successful_requests,
+			client_errors = "ict_nginx_sla".client_errors + EXCLUDED.client_errors,
+			server_errors = "ict_nginx_sla".server_errors + EXCLUDED.server_errors,
+			attack_requests = "ict_nginx_sla".attack_requests + EXCLUDED.attack_requests,
+			avg_response_time = (("ict_nginx_sla".avg_response_time * "ict_nginx_sla".total_requests) + $9) / ("ict_nginx_sla".total_requests + EXCLUDED.total_requests);
+		`, slaUUID, todayStr, batchTotal, batchSuccess, batchClientErr, batchServerErr, batchAttack, avgTime, totalResponseTime)
 
 		if err != nil {
 			log.Printf("Gagal mengolah SLA: %v", err)
 			return
 		}
 		_, _ = tx.ExecContext(ctx, `
-		UPDATE ict_nginx_sla SET sla_percentage = CASE WHEN total_requests > 0 THEN (successful_requests::numeric / total_requests::numeric) * 100 ELSE 0 END WHERE date = $1
+			UPDATE	"ict_nginx_sla"
+			SET		sla_percentage = CASE WHEN total_requests > 0 THEN (successful_requests::numeric / total_requests::numeric) * 100 ELSE 0 END
+			WHERE	date = $1
 		`, todayStr)
 	}
 
@@ -723,7 +807,9 @@ func syncAndAnalyze(ctx context.Context, es *elasticsearch.Client, indexName str
 		_, _ = es.Delete(indexName, id, es.Delete.WithContext(ctx))
 	}
 	if len(deletedDocIDs) > 0 {
-		log.Printf("[%s] Berhasil sinkronisasi %d log dari ES ke PostgreSQL.", indexName, len(deletedDocIDs))
+		log.Printf("Log %s dihapus %d", indexName, len(deletedDocIDs))
+		runtime.GC()
+		debug.FreeOSMemory()
 	}
 }
 
@@ -743,9 +829,12 @@ func cleanupOldIndices(ctx context.Context, es *elasticsearch.Client, now time.T
 		if err := json.NewDecoder(resCount.Body).Decode(&countResult); err == nil {
 			if countResult.Count > 0 {
 				query := `{"query": {"match_all": {}}}`
-				_, _ = es.DeleteByQuery([]string{oldIndexName}, strings.NewReader(query), es.DeleteByQuery.WithContext(ctx))
+				_, _ = es.DeleteByQuery([]string{oldIndexName},
+					strings.NewReader(query),
+					es.DeleteByQuery.WithContext(ctx))
 			}
-			_, _ = es.Indices.Delete([]string{oldIndexName}, es.Indices.Delete.WithContext(ctx))
+			_, _ = es.Indices.Delete([]string{oldIndexName},
+				es.Indices.Delete.WithContext(ctx))
 		}
 	}
 }
@@ -767,6 +856,5 @@ func main() {
 	}
 	res.Body.Close()
 
-	log.Println("Sistem Sinkronisasi Log Nginx Berjalan...")
 	StartSyncWorker(esClient, cfg.HttpFloodThreshold)
 }

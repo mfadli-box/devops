@@ -89,20 +89,20 @@ func archiveTable(db *sql.DB, tableName string, archiveDir string, retentionDays
 	for rows.Next() {
 		var jsonRaw string
 		if err := rows.Scan(&jsonRaw); err != nil {
-			log.Printf("Gagal memparsing baris JSON: %v", err)
+			log.Printf("Gagal memparsing baris JSON %v", err)
 			continue
 		}
 		if !fileCreated {
 			file, err = os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 			if err != nil {
-				log.Printf("Gagal membuat file arsip %s: %v", filePath, err)
+				log.Printf("Gagal membuat file arsip %s - %v", filePath, err)
 				return
 			}
 			defer file.Close()
 			fileCreated = true
 		}
 		if _, err := file.WriteString(jsonRaw + "\n"); err != nil {
-			log.Printf("Gagal menulis ke file: %v", err)
+			log.Printf("Gagal menulis ke file %v", err)
 			return
 		}
 		count++
@@ -141,11 +141,11 @@ func main() {
 	var err error
 	PgSQL, err = sql.Open("postgres", dsn)
 	if err != nil {
-		log.Fatalf("Gagal membuka basis data: %v", err)
+		log.Fatalf("Gagal membuka basis data %v", err)
 	}
 
 	if err = PgSQL.Ping(); err != nil {
-		log.Fatalf("Basis data tidak merespon: %v", err)
+		log.Fatalf("Basis data tidak merespon %v", err)
 	}
 
 	if IS_Pool == "true" {

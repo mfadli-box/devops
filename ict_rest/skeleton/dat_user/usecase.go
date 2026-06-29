@@ -21,23 +21,6 @@ func NUseCase(repo Repository) UseCase {
 	return &useCase{repo: repo}
 }
 
-var EPELogin01 = errors.New("Nama Pengguna atau kata sandi salah")
-var EPELogin02 = errors.New("Akun anda telah dinonaktifkan")
-var EPUProfile01 = errors.New("Nama lengkap dan email wajib diisi")
-var EPUPassword01 = errors.New("Kata sandi saat ini, kata sandi baru, dan konfirmasi kata sandi wajib diisi")
-var EPUPassword02 = errors.New("Konfirmasi kata sandi tidak sama")
-var EPUPassword03 = errors.New("Kata sandi baru minimal 8 karakter")
-var EPUPassword04 = errors.New("Fitur ubah kata sandi tidak tersedia untuk pengguna HRIS")
-var EPUPassword05 = errors.New("Kata sandi saat ini tidak valid")
-var EACUser01 = errors.New("Nama Pengguna, email, dan nama lengkap wajib diisi")
-var EACUser02 = errors.New("Kata sandi wajib diisi untuk pengguna baru")
-var EACUserCompany01 = errors.New("ID, ID Pengguna, dan ID Perusahaan wajib diisi")
-var EAUUserCompany01 = errors.New("ID, ID Pengguna, dan ID Perusahaan wajib diisi")
-var EACUserPrivilege01 = errors.New("ID Perusahaan dan ID Modul wajib diisi")
-var EACUserPrivilege02 = errors.New("Tingkatan hak akses tidak valid")
-var EAUUserPrivilege01 = errors.New("ID, ID Perusahaan, dan ID Modul wajib diisi")
-var EAUUserPrivilege02 = errors.New("Tingkatan hak akses tidak valid")
-
 func (u *useCase) PELogin(ctx context.Context, req UserLoginItem, ip, ua string) (*UserLoginInfo, error) {
 	req.Company = strings.TrimSpace(req.Company)
 	req.Username = strings.TrimSpace(req.Username)
@@ -45,18 +28,18 @@ func (u *useCase) PELogin(ctx context.Context, req UserLoginItem, ip, ua string)
 	user, err := u.repo.PGUserName(ctx, req.Company, req.Username)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, EPELogin01
+			return nil, errors.New("Nama Pengguna atau kata sandi salah")
 		}
 		return nil, err
 	}
 
 	if !user.IsActive {
-		return nil, EPELogin02
+		return nil, errors.New("Akun anda telah dinonaktifkan")
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
 	if err != nil {
-		return nil, EPELogin01
+		return nil, errors.New("Nama Pengguna atau kata sandi salah")
 	}
 
 	b := make([]byte, 32)
@@ -111,7 +94,7 @@ func (u *useCase) PUProfile(ctx context.Context, userID string, req UserProfileE
 	req.Phone = strings.TrimSpace(req.Phone)
 
 	if req.FullName == "" || req.Email == "" {
-		return nil, EPUProfile01
+		return nil, errors.New("Nama lengkap dan email wajib diisi")
 	}
 
 	if err := u.repo.PUProfile(ctx, userID, req); err != nil {
@@ -127,15 +110,15 @@ func (u *useCase) PUPassword(ctx context.Context, userID string, req UserPasswor
 	req.ConfirmPassword = strings.TrimSpace(req.ConfirmPassword)
 
 	if req.CurrentPassword == "" || req.NewPassword == "" || req.ConfirmPassword == "" {
-		return EPUPassword01
+		return errors.New("Kata sandi saat ini, kata sandi baru, dan konfirmasi kata sandi wajib diisi")
 	}
 
 	if req.NewPassword != req.ConfirmPassword {
-		return EPUPassword02
+		return errors.New("Konfirmasi kata sandi tidak sama")
 	}
 
 	if len(req.NewPassword) < 8 {
-		return EPUPassword03
+		return errors.New("Kata sandi baru minimal 8 karakter")
 	}
 
 	passwordHash, isHris, err := u.repo.PGPassword(ctx, userID)
@@ -144,11 +127,11 @@ func (u *useCase) PUPassword(ctx context.Context, userID string, req UserPasswor
 	}
 
 	if isHris {
-		return EPUPassword04
+		return errors.New("Fitur ubah kata sandi tidak tersedia untuk pengguna HRIS")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(req.CurrentPassword)); err != nil {
-		return EPUPassword05
+		return errors.New("Kata sandi saat ini tidak valid")
 	}
 
 	newHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
@@ -186,10 +169,10 @@ func (u *useCase) ACUser(ctx context.Context, req UserEdit) error {
 	req.Phone = strings.TrimSpace(req.Phone)
 	req.Role = strings.TrimSpace(req.Role)
 	if req.Username == "" || req.Email == "" || req.FullName == "" {
-		return EACUser01
+		return errors.New("Nama Pengguna, email, dan nama lengkap wajib diisi")
 	}
 	if req.Password == "" {
-		return EACUser02
+		return errors.New("Kata sandi wajib diisi untuk pengguna baru")
 	}
 	if req.Role == "" {
 		req.Role = "staff"
@@ -222,7 +205,7 @@ func (u *useCase) AUUser(ctx context.Context, id string, req UserEdit) error {
 	req.Phone = strings.TrimSpace(req.Phone)
 	req.Role = strings.TrimSpace(req.Role)
 	if id == "" || req.Username == "" || req.Email == "" || req.FullName == "" {
-		return EACUser01
+		return errors.New("Nama Pengguna, email, dan nama lengkap wajib diisi")
 	}
 	if req.Role == "" {
 		req.Role = "staff"
@@ -257,7 +240,7 @@ func (u *useCase) ACUserCompany(ctx context.Context, req UserCompanyEdit) error 
 	req.UserID = strings.TrimSpace(req.UserID)
 	req.CompanyID = strings.TrimSpace(req.CompanyID)
 	if req.UserID == "" || req.CompanyID == "" {
-		return EACUserCompany01
+		return errors.New("ID, ID Pengguna, dan ID Perusahaan wajib diisi")
 	}
 	return u.repo.ACUserCompany(ctx, UserCompanyItem{
 		ID:        uuid.New().String(),
@@ -272,7 +255,7 @@ func (u *useCase) AUUserCompany(ctx context.Context, id string, req UserCompanyE
 	req.UserID = strings.TrimSpace(req.UserID)
 	req.CompanyID = strings.TrimSpace(req.CompanyID)
 	if id == "" || req.UserID == "" || req.CompanyID == "" {
-		return EAUUserCompany01
+		return errors.New("ID, ID Pengguna, dan ID Perusahaan wajib diisi")
 	}
 	return u.repo.AUUserCompany(ctx, UserCompanyItem{
 		ID:        id,
@@ -291,13 +274,13 @@ func (u *useCase) ACUserPrivilege(ctx context.Context, req UserPrivilegeEdit) er
 	req.ModuleID = strings.TrimSpace(req.ModuleID)
 	req.Level = strings.TrimSpace(strings.ToLower(req.Level))
 	if req.UserCompanyID == "" || req.ModuleID == "" {
-		return EACUserPrivilege01
+		return errors.New("ID Perusahaan dan ID Modul wajib diisi")
 	}
 	if req.Level == "" {
 		req.Level = "hide"
 	}
 	if req.Level != "hide" && req.Level != "view" && req.Level != "book" && req.Level != "post" {
-		return EACUserPrivilege02
+		return errors.New("Tingkatan hak akses tidak valid")
 	}
 	return u.repo.ACUserPrivilege(ctx, UserPrivilegeItem{
 		ID:            uuid.New().String(),
@@ -313,13 +296,13 @@ func (u *useCase) AUUserPrivilege(ctx context.Context, id string, req UserPrivil
 	req.ModuleID = strings.TrimSpace(req.ModuleID)
 	req.Level = strings.TrimSpace(strings.ToLower(req.Level))
 	if id == "" || req.UserCompanyID == "" || req.ModuleID == "" {
-		return EAUUserPrivilege01
+		return errors.New("ID, ID Perusahaan, dan ID Modul wajib diisi")
 	}
 	if req.Level == "" {
 		req.Level = "hide"
 	}
 	if req.Level != "hide" && req.Level != "view" && req.Level != "book" && req.Level != "post" {
-		return EAUUserPrivilege02
+		return errors.New("Tingkatan hak akses tidak valid")
 	}
 	return u.repo.AUUserPrivilege(ctx, UserPrivilegeItem{
 		ID:            id,

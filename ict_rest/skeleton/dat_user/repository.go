@@ -215,7 +215,8 @@ func (r *repository) PLHistory(ctx context.Context, userID string, limit int) ([
 
 func (r *repository) ALUser(ctx context.Context) ([]UserItem, error) {
 	query := `
-		SELECT	id, COALESCE(company_id, ''), username, email, fullname, COALESCE(phone, ''), role, is_admin, is_hris, is_active
+		SELECT	id, COALESCE(company_id, ''), username, email,
+				fullname, COALESCE(phone, ''), role, is_admin, is_hris, is_active
 		FROM	"dat_user"
 		ORDER BY username
 	`
@@ -249,7 +250,8 @@ func (r *repository) ALUser(ctx context.Context) ([]UserItem, error) {
 func (r *repository) ACUser(ctx context.Context, user UserItem, passwordHash string) error {
 	query := `
 		INSERT INTO "dat_user" (
-			id, company_id, username, email, password, fullname, phone, role, is_admin, is_hris, is_active, created_at, updated_at
+			id, company_id, username, email, password, fullname, phone, role,
+			is_admin, is_hris, is_active, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, ''), $8, $9, $10, $11, NOW(), NOW())
 	`
 	_, err := r.db.ExecContext(ctx, query,

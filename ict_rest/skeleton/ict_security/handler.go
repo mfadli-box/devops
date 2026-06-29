@@ -81,13 +81,13 @@ func (h *Handler) NCIPM(c *gin.Context) {
 	err := h.usecase.NCIPM(c.Request.Context(), req.IP, req.Description)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": "Konversi digagalkan secara aman, silakan periksa berkas log sistem.",
+			"message": "Konversi digagalkan secara aman.",
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "IP " + req.IP + " sukses di-whitelist & performa SLA berhasil diperbarui.",
+		"message": "IP " + req.IP + " sukses di-whitelist.",
 	})
 }
 
@@ -133,20 +133,22 @@ func (h *Handler) NCWAF(c *gin.Context) {
 	var req WAFItem
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON payload tidak valid"})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "JSON payload tidak valid",
+		})
 		return
 	}
 
 	err := h.usecase.NCWAF(c.Request.Context(), req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": "Transaksi dibatalkan secara aman. Silakan periksa berkas log sistem.",
+			"message": "Transaksi dibatalkan secara aman.",
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Bypass rule berhasil dibuat. Struktur serangan historis yang sesuai telah dibersihkan dan SLA telah diseimbangkan.",
+		"message": "Aturan WAF berhasil dibuat.",
 	})
 }
 

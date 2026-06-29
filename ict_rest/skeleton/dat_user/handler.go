@@ -33,13 +33,13 @@ func (h *Handler) PELogin(c *gin.Context) {
 
 	res, err := h.usecase.PELogin(c.Request.Context(), req, ipAddress, userAgent)
 	if err != nil {
-		if errors.Is(err, EPELogin01) {
+		if errors.Is(err, errors.New("Nama Pengguna atau kata sandi salah")) {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": err.Error(),
 			})
 			return
 		}
-		if errors.Is(err, EPELogin02) {
+		if errors.Is(err, errors.New("Akun anda telah dinonaktifkan")) {
 			c.JSON(http.StatusForbidden, gin.H{
 				"error": err.Error(),
 			})
@@ -61,7 +61,8 @@ func (h *Handler) PELogin(c *gin.Context) {
 			Value:    url.QueryEscape(string(cookiePayload)),
 			Path:     "/",
 			HttpOnly: true,
-			SameSite: http.SameSiteStrictMode,
+			Secure:   false,
+			SameSite: http.SameSiteLaxMode,
 			MaxAge:   int(time.Until(res.ExpiresAt).Seconds()),
 			Expires:  res.ExpiresAt,
 		})
@@ -95,7 +96,8 @@ func (h *Handler) PELogout(c *gin.Context) {
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   0,
 		Expires:  time.Unix(0, 0),
 	})
@@ -179,7 +181,7 @@ func (h *Handler) PUPassword(c *gin.Context) {
 
 	err := h.usecase.PUPassword(c.Request.Context(), userID, req)
 	if err != nil {
-		if err.Error() == "fitur ubah kata sandi tidak tersedia untuk pengguna HRIS" {
+		if err.Error() == "Fitur ubah kata sandi tidak tersedia untuk pengguna HRIS" {
 			c.JSON(http.StatusForbidden, gin.H{
 				"error": err.Error(),
 			})
@@ -241,7 +243,7 @@ func (h *Handler) ACUser(c *gin.Context) {
 	}
 	if err := h.usecase.ACUser(c.Request.Context(), req); err != nil {
 		status := http.StatusBadRequest
-		if errors.Is(err, EACUser01) {
+		if errors.Is(err, errors.New("Nama Pengguna, email, dan nama lengkap wajib diisi")) {
 			status = http.StatusBadRequest
 		}
 		c.JSON(status, gin.H{
@@ -265,7 +267,7 @@ func (h *Handler) AUUser(c *gin.Context) {
 	}
 	if err := h.usecase.AUUser(c.Request.Context(), id, req); err != nil {
 		status := http.StatusBadRequest
-		if errors.Is(err, EACUser01) {
+		if errors.Is(err, errors.New("Nama Pengguna, email, dan nama lengkap wajib diisi")) {
 			status = http.StatusBadRequest
 		}
 		c.JSON(status, gin.H{
@@ -302,7 +304,7 @@ func (h *Handler) ACUserCompany(c *gin.Context) {
 	}
 	if err := h.usecase.ACUserCompany(c.Request.Context(), req); err != nil {
 		status := http.StatusBadRequest
-		if errors.Is(err, EAUUserCompany01) {
+		if errors.Is(err, errors.New("ID, ID Pengguna, dan ID Perusahaan wajib diisi")) {
 			status = http.StatusBadRequest
 		}
 		c.JSON(status, gin.H{

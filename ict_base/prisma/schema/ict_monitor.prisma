@@ -25,3 +25,35 @@ model ict_uptimerobot_log {
   @@index([monitor_id])
   @@index([alert_datetime])
 }
+
+model ict_uptimerobot_sum {
+  id                       String            @id @default(uuid())
+  date                     DateTime
+  domain                   String
+  total_monitors           Int
+  total_downtime_sec       Int               @default(0)
+  total_uptime_sec         Int               @default(0)
+  average_sla              Float
+  created_at               DateTime          @default(now())
+  updated_at               DateTime          @updatedAt
+
+  @@unique([date, domain])
+  @@index([domain])
+  @@index([date])
+}
+
+model ict_uptimerobot_sla {
+  id                       String            @id @default(uuid())
+  monitor_id               Int
+  monitor_friendly_name    String
+  monitor_url              String
+  date                     DateTime
+  total_downtime_sec       Int               @default(0)
+  total_uptime_sec         Int               @default(0)
+  sla_percentage           Float
+  created_at               DateTime          @default(now())
+  updated_at               DateTime          @updatedAt
+
+  @@unique([monitor_id, date])
+  @@index([date])
+}

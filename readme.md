@@ -16,11 +16,12 @@ This project employs a **Monorepo** approach, managed as an integrated DevOps st
 ├── ict_base/                      # Database Layer & Prisma ORM
 │   └── prisma/
 │       └── schema/                # 1 .prisma file per Database Cluster
+│           └── [schema].prisma
 ├── ict_auto/                      # Automation Services (Go CLI)
 │   ├── ict_nginx_log/
 │   │   ├── main.go
 │   │   └── Dockerfile
-├── ict_rotate_log/
+│   ├── ict_rotate_log/
 │   │   ├── main.go
 │   │   └── Dockerfile
 │   └── [other_automation_service]/
@@ -29,10 +30,18 @@ This project employs a **Monorepo** approach, managed as an integrated DevOps st
 ├── ict_rest/                      # Backend REST API (Gin Gonic)
 │   ├── backbone/                  # Router, Database Config, Session Middleware
 │   ├── skeleton/                  # API Modules (Linear Layer Flow Pattern)
+│   │   └── [cluster]              # API Sub-Module
+│   │       ├── tempate.go         # Template (Structs & Interfaces)
+│   │       ├── repository.go      # Repository
+│   │       ├── usecase.go         # Usecase
+│   │       └── handler.go         # Handler
 │   ├── main.go
 │   └── Dockerfile
 └── ict_site/                      # Frontend Web Application (Next.js)
     ├── src/                       # Main Source Code (TypeScript)
+    │   ├── app/                   # Application
+    │   ├── lib/                   # Library
+    │   └── uix/                   # UI/UX
     └── Dockerfile
 ```
 
