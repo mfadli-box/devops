@@ -323,7 +323,7 @@ func runSyncTask(es *elasticsearch.Client, threshold int) {
 	currentIndex := fmt.Sprintf("logstash_%s", now.Format("2006.01.02"))
 
 	syncAndAnalyze(ctx, es, beforeIndex, eod, threshold)
-	syncAndAnalyze(ctx, es, currentIndex, eod, threshold)
+	syncAndAnalyze(ctx, es, currentIndex, now, threshold)
 	cleanupOldIndices(ctx, es, eod)
 }
 
