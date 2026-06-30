@@ -333,7 +333,7 @@ func IsBypassedRuleDB(db *sql.DB, domain, urlPath, args string) bool {
 		FROM	"ict_waf_bypass_rule"
 		WHERE	(domain = $1 OR domain = '*')
 		  AND	url_path = $2
-		  AND	($3 = '' OR args_pattern IS NULL OR args LIKE '%' || args_pattern || '%')
+		  AND	($3 = '' OR args_pattern IS NULL OR args_pattern LIKE '%' || $3 || '%')
 	`
 	var count int
 	err := db.QueryRow(query, domain, urlPath, args).Scan(&count)
