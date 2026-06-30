@@ -3,6 +3,7 @@ package ict_monitor
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/url"
 	"strconv"
 	"strings"
@@ -20,76 +21,76 @@ func NUseCase(r Repository) UseCase {
 }
 
 func (u *useCase) URHook(ctx context.Context, req UptimeAlertItem) error {
-	var resp UptimeAlertInfo
+	var res UptimeAlertInfo
 
-	resp.ID = uuid.New().String()
-	resp.MonitorID = req.MonitorID
-	resp.MonitorURL = req.MonitorURL
-	resp.MonitorFriendlyName = req.MonitorFriendlyName
-	resp.AlertType = req.AlertType
-	resp.AlertTypeFriendlyName = req.AlertTypeFriendlyName
-	resp.MonitorAlertContacts = req.MonitorAlertContacts
-	resp.DashboardURL = req.DashboardURL
-	resp.MonitorType = req.MonitorType
+	res.ID = uuid.New().String()
+	res.MonitorID = req.MonitorID
+	res.MonitorURL = req.MonitorURL
+	res.MonitorFriendlyName = req.MonitorFriendlyName
+	res.AlertType = req.AlertType
+	res.AlertTypeFriendlyName = req.AlertTypeFriendlyName
+	res.MonitorAlertContacts = req.MonitorAlertContacts
+	res.DashboardURL = req.DashboardURL
+	res.MonitorType = req.MonitorType
 
 	if req.AlertDetails != "" {
-		resp.AlertDetails = &req.AlertDetails
+		res.AlertDetails = &req.AlertDetails
 	}
 	if req.AlertDuration != "" && req.AlertDuration != "0" {
 		if val, err := strconv.Atoi(req.AlertDuration); err == nil {
-			resp.AlertDuration = &val
+			res.AlertDuration = &val
 		}
 	}
 	if req.ResponseTime != "" {
 		if val, err := strconv.Atoi(req.ResponseTime); err == nil {
-			resp.ResponseTime = &val
+			res.ResponseTime = &val
 		}
 	}
 	if req.HTTPStatusCode != "" && req.HTTPStatusCode != "0" {
 		if val, err := strconv.Atoi(req.HTTPStatusCode); err == nil {
-			resp.HTTPStatusCode = &val
+			res.HTTPStatusCode = &val
 		}
 	}
 	if req.SSLExpiryDaysLeft != "" {
 		if val, err := strconv.Atoi(req.SSLExpiryDaysLeft); err == nil {
-			resp.SSLExpiryDaysLeft = &val
+			res.SSLExpiryDaysLeft = &val
 		}
 	}
 	if req.AlertDateTime > 0 {
-		resp.AlertDateTime = time.Unix(req.AlertDateTime, 0).UTC()
+		res.AlertDateTime = time.Unix(req.AlertDateTime, 0).UTC()
 	} else {
-		resp.AlertDateTime = time.Now().UTC()
+		res.AlertDateTime = time.Now().UTC()
 	}
 	if req.IncidentStartTime > 0 {
-		resp.IncidentStartTime = time.Unix(req.IncidentStartTime, 0).UTC()
+		res.IncidentStartTime = time.Unix(req.IncidentStartTime, 0).UTC()
 	} else {
-		resp.IncidentStartTime = time.Now().UTC()
+		res.IncidentStartTime = time.Now().UTC()
 	}
 	if req.IncidentEndTime != "" && req.IncidentEndTime != "0" {
 		if tInt, err := strconv.ParseInt(req.IncidentEndTime, 10, 64); err == nil && tInt > 0 {
 			tTime := time.Unix(tInt, 0).UTC()
-			resp.IncidentEndTime = &tTime
+			res.IncidentEndTime = &tTime
 		}
 	}
 	if req.SSLExpiryDate > 0 {
 		tTime := time.Unix(req.SSLExpiryDate, 0).UTC()
-		resp.SSLExpiryDate = &tTime
+		res.SSLExpiryDate = &tTime
 	}
 	if req.MonitoringRegions != "" {
-		resp.MonitoringRegions = []byte(req.MonitoringRegions)
+		res.MonitoringRegions = []byte(req.MonitoringRegions)
 	} else {
-		resp.MonitoringRegions, _ = json.Marshal([]string{})
+		res.MonitoringRegions, _ = json.Marshal([]string{})
 	}
 	if req.MonitorTags != "" {
-		resp.MonitorTags = []byte(req.MonitorTags)
+		res.MonitorTags = []byte(req.MonitorTags)
 	} else {
-		resp.MonitorTags, _ = json.Marshal([]string{})
+		res.MonitorTags, _ = json.Marshal([]string{})
 	}
 	if req.MonitorGroup != "" {
-		resp.MonitorGroup = &req.MonitorGroup
+		res.MonitorGroup = &req.MonitorGroup
 	}
 
-	err := u.repo.URHook(ctx, resp)
+	err := u.repo.URHook(ctx, res)
 	if err != nil {
 		return err
 	}
@@ -98,10 +99,10 @@ func (u *useCase) URHook(ctx context.Context, req UptimeAlertItem) error {
 		defer cancel()
 		targetDate := time.Now().UTC()
 		_ = u.repo.URHookSla(calcCtx, targetDate, monitorID, monitorURL, name)
-		if resp.IncidentStartTime.Before(time.Date(targetDate.Year(), targetDate.Month(), targetDate.Day(), 0, 0, 0, 0, time.UTC)) {
-			_ = u.repo.URHookSla(calcCtx, resp.IncidentStartTime, monitorID, monitorURL, name)
+		if res.IncidentStartTime.Before(time.Date(targetDate.Year(), targetDate.Month(), targetDate.Day(), 0, 0, 0, 0, time.UTC)) {
+			_ = u.repo.URHookSla(calcCtx, res.IncidentStartTime, monitorID, monitorURL, name)
 		}
-	}(resp.MonitorID, resp.MonitorURL, resp.MonitorFriendlyName)
+	}(res.MonitorID, res.MonitorURL, res.MonitorFriendlyName)
 
 	return nil
 }
@@ -159,4 +160,11 @@ func (u *useCase) URSum(ctx context.Context, f FilterParams) (map[string]interfa
 		return nil, err
 	}
 	return u.formatMetaResponse(items, total, f.Page, f.Limit), nil
+}
+
+func (u *useCase) DURLog(ctx context.Context, logID string) error {
+	if logID == "" {
+		return errors.New("ID log tidak boleh kosong")
+	}
+	return u.repo.DURLog(ctx, logID)
 }

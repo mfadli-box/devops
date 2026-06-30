@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,6 +18,19 @@ type Handler struct {
 
 func NHandler(u UseCase) *Handler {
 	return &Handler{usecase: u}
+}
+
+func NPages(c *gin.Context) (limit, offset int) {
+	limit, _ = strconv.Atoi(c.DefaultQuery("limit", "10"))
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if limit <= 0 {
+		limit = 10
+	}
+	if page <= 0 {
+		page = 1
+	}
+	offset = (page - 1) * limit
+	return limit, offset
 }
 
 func (h *Handler) PELogin(c *gin.Context) {
@@ -207,7 +221,7 @@ func (h *Handler) PLHistory(c *gin.Context) {
 		return
 	}
 
-	actions, err := h.usecase.PLHistory(c.Request.Context(), userID, 50)
+	list, err := h.usecase.PLHistory(c.Request.Context(), userID, 50)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Gagal mengambil riwayat pengguna",
@@ -216,7 +230,7 @@ func (h *Handler) PLHistory(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"data": actions,
+		"data": list,
 	})
 }
 

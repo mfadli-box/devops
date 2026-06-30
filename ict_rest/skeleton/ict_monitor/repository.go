@@ -3,6 +3,8 @@ package ict_monitor
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -17,7 +19,7 @@ func NRepository(db *sql.DB) Repository {
 	return &repository{db: db}
 }
 
-func (r *repository) URHook(ctx context.Context, item UptimeAlertInfo) error {
+func (r *repository) URHook(ctx context.Context, req UptimeAlertInfo) error {
 	query := `
 		INSERT INTO "ict_uptimerobot_log" (
 			id, monitorid, monitorurl, monitorfriendlyname, alerttype, alerttypefriendlyname,
@@ -37,41 +39,41 @@ func (r *repository) URHook(ctx context.Context, item UptimeAlertInfo) error {
 			responsetime = EXCLUDED.responsetime
 	`
 
-	if item.ID == "" {
-		item.ID = uuid.New().String()
+	if req.ID == "" {
+		req.ID = uuid.New().String()
 	}
 
 	_, err := r.db.ExecContext(ctx, query,
-		item.ID,
-		item.MonitorID,
-		item.MonitorURL,
-		item.MonitorFriendlyName,
-		item.AlertType,
-		item.AlertTypeFriendlyName,
-		item.AlertDetails,
-		item.AlertDuration,
-		item.AlertDateTime,
-		item.MonitorAlertContacts,
-		item.SSLExpiryDate,
-		item.SSLExpiryDaysLeft,
-		item.DashboardURL,
-		item.MonitorType,
-		item.HTTPStatusCode,
-		item.MonitoringRegions,
-		item.MonitorTags,
-		item.MonitorGroup,
-		item.IncidentStartTime,
-		item.IncidentEndTime,
-		item.ResponseTime,
+		req.ID,
+		req.MonitorID,
+		req.MonitorURL,
+		req.MonitorFriendlyName,
+		req.AlertType,
+		req.AlertTypeFriendlyName,
+		req.AlertDetails,
+		req.AlertDuration,
+		req.AlertDateTime,
+		req.MonitorAlertContacts,
+		req.SSLExpiryDate,
+		req.SSLExpiryDaysLeft,
+		req.DashboardURL,
+		req.MonitorType,
+		req.HTTPStatusCode,
+		req.MonitoringRegions,
+		req.MonitorTags,
+		req.MonitorGroup,
+		req.IncidentStartTime,
+		req.IncidentEndTime,
+		req.ResponseTime,
 	)
 	return err
 }
 
-func (r *repository) URHookSla(ctx context.Context, targetDate time.Time, monitorID int, rawURL string, friendlyName string) error {
-	startOfDay := time.Date(targetDate.Year(), targetDate.Month(), targetDate.Day(), 0, 0, 0, 0, time.UTC)
+func (r *repository) URHookSla(ctx context.Context, qdate time.Time, qid int, qurl string, qname string) error {
+	startOfDay := time.Date(qdate.Year(), qdate.Month(), qdate.Day(), 0, 0, 0, 0, time.UTC)
 	endOfDay := startOfDay.Add(24 * time.Hour)
 	dateStr := startOfDay.Format("2006-01-02")
-	domain := extractDomain(rawURL)
+	domain := extractDomain(qurl)
 
 	queryLogs := `
 		SELECT	incidentstarttime, incidentendtime 
@@ -81,7 +83,7 @@ func (r *repository) URHookSla(ctx context.Context, targetDate time.Time, monito
 		  AND	incidentstarttime < $2
 		  AND	(incidentendtime >= $3 OR incidentendtime IS NULL)
 	`
-	rows, err := r.db.QueryContext(ctx, queryLogs, monitorID, endOfDay, startOfDay)
+	rows, err := r.db.QueryContext(ctx, queryLogs, qid, endOfDay, startOfDay)
 	if err != nil {
 		return err
 	}
@@ -144,9 +146,9 @@ func (r *repository) URHookSla(ctx context.Context, targetDate time.Time, monito
 	dailyID := uuid.New().String()
 	_, err = tx.ExecContext(ctx, upsertDailyQuery,
 		dailyID,
-		monitorID,
-		friendlyName,
-		rawURL,
+		qid,
+		qname,
+		qurl,
 		dateStr,
 		totalDowntimeSec,
 		totalUptimeSec,
@@ -286,7 +288,9 @@ func (r *repository) URSla(ctx context.Context, f FilterParams) ([]UptimeSla, in
 		idx++
 	}
 
-	err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM "ict_uptimerobot_sla"`+baseWhere, args...).Scan(&total)
+	err := r.db.QueryRowContext(ctx, `
+		SELECT	COUNT(*)
+		FROM	"ict_uptimerobot_sla"`+baseWhere, args...).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -355,7 +359,9 @@ func (r *repository) URSum(ctx context.Context, f FilterParams) ([]UptimeSum, in
 		idx++
 	}
 
-	err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM "ict_uptimerobot_sum"`+baseWhere, args...).Scan(&total)
+	err := r.db.QueryRowContext(ctx, `
+		SELECT	COUNT(*)
+		FROM	"ict_uptimerobot_sum"`+baseWhere, args...).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -389,4 +395,54 @@ func (r *repository) URSum(ctx context.Context, f FilterParams) ([]UptimeSum, in
 		items = append(items, i)
 	}
 	return items, total, nil
+}
+
+func (r *repository) DURLog(ctx context.Context, logID string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var monitorID int
+	var rawURL string
+	var friendlyName string
+	var incidentStart time.Time
+
+	findQuery := `
+		SELECT	monitorid, monitorurl, monitorfriendlyname, incidentstarttime 
+		FROM	"ict_uptimerobot_log" 
+		WHERE	id = $1
+	`
+	err = tx.QueryRowContext(ctx, findQuery, logID).Scan(
+		&monitorID,
+		&rawURL,
+		&friendlyName,
+		&incidentStart)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("Log tidak ditemukan")
+		}
+		return err
+	}
+
+	deleteQuery := `
+		DELETE	FROM "ict_uptimerobot_log"
+		WHERE	id = $1
+	`
+	_, err = tx.ExecContext(ctx, deleteQuery, logID)
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	err = r.URHookSla(ctx, incidentStart, monitorID, rawURL, friendlyName)
+	if err != nil {
+		return fmt.Errorf("Log berhasil dihapus - SLA Gagal Kalkulasi Ulang %v", err)
+	}
+
+	return nil
 }

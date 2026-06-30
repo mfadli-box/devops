@@ -201,6 +201,21 @@ type LOGInfo struct {
 	CreatedAt     time.Time `json:"created_at"`
 }
 
+type TxOrDB interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+}
+
+type Result interface {
+	RowsAffected() (int64, error)
+}
+
+type Rows interface {
+	Next() bool
+	Scan(dest ...interface{}) error
+	Close() error
+}
+
 type Repository interface {
 	NLSLA(ctx context.Context, limit, offset int) ([]SLAInfo, error)
 	NLIPW(ctx context.Context, search string, limit, offset int) ([]IPWInfo, error)
@@ -235,19 +250,4 @@ type UseCase interface {
 	NDWAF(ctx context.Context, id string) error
 	NLATC(ctx context.Context, date string) ([]ATCList, error)
 	NLLOG(ctx context.Context, ip, date string) (*LOGList, error)
-}
-
-type TxOrDB interface {
-	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
-	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
-}
-
-type Result interface {
-	RowsAffected() (int64, error)
-}
-
-type Rows interface {
-	Next() bool
-	Scan(dest ...interface{}) error
-	Close() error
 }

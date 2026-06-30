@@ -143,17 +143,17 @@ func (u *useCase) PUPassword(ctx context.Context, userID string, req UserPasswor
 }
 
 func (u *useCase) PLHistory(ctx context.Context, userID string, limit int) ([]UserAction, error) {
-	actions, err := u.repo.PLHistory(ctx, userID, limit)
+	list, err := u.repo.PLHistory(ctx, userID, limit)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return []UserAction{}, nil
 		}
 		return nil, err
 	}
-	if actions == nil {
+	if list == nil {
 		return []UserAction{}, nil
 	}
-	return actions, nil
+	return list, nil
 }
 
 func (u *useCase) ALUser(ctx context.Context) ([]UserItem, error) {

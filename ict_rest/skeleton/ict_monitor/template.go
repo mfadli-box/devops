@@ -144,11 +144,12 @@ type FilterParams struct {
 }
 
 type Repository interface {
-	URHook(ctx context.Context, item UptimeAlertInfo) error
-	URHookSla(ctx context.Context, targetDate time.Time, monitorID int, monitorURL string, friendlyName string) error
+	URHook(ctx context.Context, req UptimeAlertInfo) error
+	URHookSla(ctx context.Context, qdate time.Time, qid int, qurl string, qname string) error
 	URLog(ctx context.Context, f FilterParams) ([]UptimeAlertInfo, int, error)
 	URSla(ctx context.Context, f FilterParams) ([]UptimeSla, int, error)
 	URSum(ctx context.Context, f FilterParams) ([]UptimeSum, int, error)
+	DURLog(ctx context.Context, id string) error
 }
 
 type UseCase interface {
@@ -156,4 +157,5 @@ type UseCase interface {
 	URLog(ctx context.Context, f FilterParams) (map[string]interface{}, error)
 	URSla(ctx context.Context, f FilterParams) (map[string]interface{}, error)
 	URSum(ctx context.Context, f FilterParams) (map[string]interface{}, error)
+	DURLog(ctx context.Context, id string) error
 }

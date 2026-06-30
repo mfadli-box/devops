@@ -56,19 +56,19 @@ func (r *repository) PLModule(ctx context.Context, userID, companyID string) ([]
 
 	var out []ModuleItem
 	for rows.Next() {
-		var rrow ModuleItem
+		var res ModuleItem
 		if err := rows.Scan(
-			&rrow.ID,
-			&rrow.ParentID,
-			&rrow.Code,
-			&rrow.Name,
-			&rrow.Path,
-			&rrow.IsPage,
-			&rrow.IsActive,
-			&rrow.Level); err != nil {
+			&res.ID,
+			&res.ParentID,
+			&res.Code,
+			&res.Name,
+			&res.Path,
+			&res.IsPage,
+			&res.IsActive,
+			&res.Level); err != nil {
 			continue
 		}
-		out = append(out, rrow)
+		out = append(out, res)
 	}
 	return out, nil
 }
@@ -87,40 +87,40 @@ func (r *repository) ALModule(ctx context.Context) ([]ModuleList, error) {
 
 	out := make([]ModuleList, 0)
 	for rows.Next() {
-		var item ModuleList
+		var res ModuleList
 		if err := rows.Scan(
-			&item.ID,
-			&item.ParentID,
-			&item.Code,
-			&item.Name,
-			&item.Path,
-			&item.IsPage,
-			&item.IsActive); err != nil {
+			&res.ID,
+			&res.ParentID,
+			&res.Code,
+			&res.Name,
+			&res.Path,
+			&res.IsPage,
+			&res.IsActive); err != nil {
 			return nil, err
 		}
-		out = append(out, item)
+		out = append(out, res)
 	}
 	return out, rows.Err()
 }
 
-func (r *repository) ACModule(ctx context.Context, item ModuleList) error {
+func (r *repository) ACModule(ctx context.Context, req ModuleList) error {
 	query := `
 		INSERT INTO "dat_module" (
 			id, parent_id, code, name, path, is_page, is_active, created_at, updated_at
 		) VALUES ($1, NULLIF($2, ''), $3, $4, $5, $6, $7, NOW(), NOW())
 	`
 	_, err := r.db.ExecContext(ctx, query,
-		item.ID,
-		item.ParentID,
-		item.Code,
-		item.Name,
-		item.Path,
-		item.IsPage,
-		item.IsActive)
+		req.ID,
+		req.ParentID,
+		req.Code,
+		req.Name,
+		req.Path,
+		req.IsPage,
+		req.IsActive)
 	return err
 }
 
-func (r *repository) AUModule(ctx context.Context, item ModuleList) error {
+func (r *repository) AUModule(ctx context.Context, req ModuleList) error {
 	query := `
 		UPDATE "dat_module"
 		SET 	parent_id = NULLIF($1, ''),
@@ -133,12 +133,12 @@ func (r *repository) AUModule(ctx context.Context, item ModuleList) error {
 		WHERE   id = $7
 	`
 	_, err := r.db.ExecContext(ctx, query,
-		item.ParentID,
-		item.Code,
-		item.Name,
-		item.Path,
-		item.IsPage,
-		item.IsActive,
-		item.ID)
+		req.ParentID,
+		req.Code,
+		req.Name,
+		req.Path,
+		req.IsPage,
+		req.IsActive,
+		req.ID)
 	return err
 }

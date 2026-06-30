@@ -158,6 +158,5 @@ func main() {
 
 	StartAutoArchiveAndRetentionWorker(PgSQL)
 
-	log.Println("Aplikasi berjalan...")
 	select {}
 }

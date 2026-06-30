@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { BACKEND_URL } from "@/lib/backend";
+import { handleGlobalError } from "@/lib/apiproxy";
 
 export async function POST(request: Request) {
   try {
@@ -25,6 +26,6 @@ export async function POST(request: Request) {
     }
     return nextResponse;
   } catch (error) {
-    return NextResponse.json({ error: "Gagal menghubungi sistem layanan." }, { status: 500 });
+    return handleGlobalError(error);
   }
 }

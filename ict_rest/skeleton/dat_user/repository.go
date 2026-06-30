@@ -27,30 +27,30 @@ func (r *repository) PGUserName(ctx context.Context, companyID string, username 
 				role, is_admin, is_hris, is_active
 		FROM	"dat_user"
 		WHERE	company_id = $1
-		AND	username = $2
+		   AND	username = $2
 	`
-	var u UserProfile
+	var res UserProfile
 	err := r.db.QueryRowContext(ctx, query, companyID, username).Scan(
-		&u.ID,
-		&u.Username,
-		&u.Email,
-		&u.Password,
-		&u.FullName,
-		&u.Phone,
-		&u.CompanyId,
-		&u.EmployeeId,
-		&u.RegionalId,
-		&u.OfficeId,
-		&u.DepartmentId,
-		&u.DivisionId,
-		&u.Role,
-		&u.IsAdmin,
-		&u.IsHris,
-		&u.IsActive)
+		&res.ID,
+		&res.Username,
+		&res.Email,
+		&res.Password,
+		&res.FullName,
+		&res.Phone,
+		&res.CompanyId,
+		&res.EmployeeId,
+		&res.RegionalId,
+		&res.OfficeId,
+		&res.DepartmentId,
+		&res.DivisionId,
+		&res.Role,
+		&res.IsAdmin,
+		&res.IsHris,
+		&res.IsActive)
 	if err != nil {
 		return nil, err
 	}
-	return &u, nil
+	return &res, nil
 }
 
 func (r *repository) PGUserID(ctx context.Context, userID string) (*UserProfile, error) {
@@ -67,48 +67,50 @@ func (r *repository) PGUserID(ctx context.Context, userID string) (*UserProfile,
 		FROM	"dat_user"
 		WHERE	id = $1
 	`
-	var u UserProfile
+	var res UserProfile
 	err := r.db.QueryRowContext(ctx, query, userID).Scan(
-		&u.ID,
-		&u.Username,
-		&u.Email,
-		&u.Password,
-		&u.FullName,
-		&u.Phone,
-		&u.CompanyId,
-		&u.EmployeeId,
-		&u.RegionalId,
-		&u.OfficeId,
-		&u.DepartmentId,
-		&u.DivisionId,
-		&u.Role,
-		&u.IsAdmin,
-		&u.IsHris,
-		&u.IsActive)
+		&res.ID,
+		&res.Username,
+		&res.Email,
+		&res.Password,
+		&res.FullName,
+		&res.Phone,
+		&res.CompanyId,
+		&res.EmployeeId,
+		&res.RegionalId,
+		&res.OfficeId,
+		&res.DepartmentId,
+		&res.DivisionId,
+		&res.Role,
+		&res.IsAdmin,
+		&res.IsHris,
+		&res.IsActive)
 	if err != nil {
 		return nil, err
 	}
-	return &u, nil
+	return &res, nil
 }
 
-func (r *repository) PELogin(ctx context.Context, p UserSession) error {
+func (r *repository) PELogin(ctx context.Context, req UserSession) error {
 	query := `
 		INSERT INTO "dat_user_session" (
 			id, user_id, token, ip_address, user_agent, expires_at, created_at
 		) VALUES ($1, $2, $3, $4, $5, $6, NOW())
 	`
 	_, err := r.db.ExecContext(ctx, query,
-		p.ID,
-		p.UserID,
-		p.Token,
-		p.IPAddress,
-		p.UserAgent,
-		p.ExpiresAt)
+		req.ID,
+		req.UserID,
+		req.Token,
+		req.IPAddress,
+		req.UserAgent,
+		req.ExpiresAt)
 	return err
 }
 
 func (r *repository) PELogout(ctx context.Context, token string) error {
-	query := `DELETE FROM "dat_user_session" WHERE token = $1`
+	query := `
+		DELETE	FROM "dat_user_session"
+		WHERE	token = $1`
 	_, err := r.db.ExecContext(ctx, query, token)
 	return err
 }
@@ -186,7 +188,7 @@ func (r *repository) PLHistory(ctx context.Context, userID string, limit int) ([
 	}
 	defer rows.Close()
 
-	actions := make([]UserAction, 0)
+	res := make([]UserAction, 0)
 	for rows.Next() {
 		item := UserAction{}
 		var createdAt time.Time
@@ -203,14 +205,14 @@ func (r *repository) PLHistory(ctx context.Context, userID string, limit int) ([
 			return nil, err
 		}
 		item.CreatedAt = createdAt
-		actions = append(actions, item)
+		res = append(res, item)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
-	return actions, nil
+	return res, nil
 }
 
 func (r *repository) ALUser(ctx context.Context) ([]UserItem, error) {
@@ -228,26 +230,26 @@ func (r *repository) ALUser(ctx context.Context) ([]UserItem, error) {
 
 	out := make([]UserItem, 0)
 	for rows.Next() {
-		var item UserItem
+		var res UserItem
 		if err := rows.Scan(
-			&item.ID,
-			&item.CompanyID,
-			&item.Username,
-			&item.Email,
-			&item.FullName,
-			&item.Phone,
-			&item.Role,
-			&item.IsAdmin,
-			&item.IsHris,
-			&item.IsActive); err != nil {
+			&res.ID,
+			&res.CompanyID,
+			&res.Username,
+			&res.Email,
+			&res.FullName,
+			&res.Phone,
+			&res.Role,
+			&res.IsAdmin,
+			&res.IsHris,
+			&res.IsActive); err != nil {
 			return nil, err
 		}
-		out = append(out, item)
+		out = append(out, res)
 	}
 	return out, rows.Err()
 }
 
-func (r *repository) ACUser(ctx context.Context, user UserItem, passwordHash string) error {
+func (r *repository) ACUser(ctx context.Context, req UserItem, passwordHash string) error {
 	query := `
 		INSERT INTO "dat_user" (
 			id, company_id, username, email, password, fullname, phone, role,
@@ -255,21 +257,21 @@ func (r *repository) ACUser(ctx context.Context, user UserItem, passwordHash str
 		) VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, ''), $8, $9, $10, $11, NOW(), NOW())
 	`
 	_, err := r.db.ExecContext(ctx, query,
-		user.ID,
-		user.CompanyID,
-		user.Username,
-		user.Email,
+		req.ID,
+		req.CompanyID,
+		req.Username,
+		req.Email,
 		passwordHash,
-		user.FullName,
-		user.Phone,
-		user.Role,
-		user.IsAdmin,
-		user.IsHris,
-		user.IsActive)
+		req.FullName,
+		req.Phone,
+		req.Role,
+		req.IsAdmin,
+		req.IsHris,
+		req.IsActive)
 	return err
 }
 
-func (r *repository) AUUser(ctx context.Context, user UserItem, passwordHash string) error {
+func (r *repository) AUUser(ctx context.Context, req UserItem, passwordHash string) error {
 	query := `
 		UPDATE "dat_user"
 		SET		company_id = $1,
@@ -286,17 +288,17 @@ func (r *repository) AUUser(ctx context.Context, user UserItem, passwordHash str
 		WHERE   id = $11
 	`
 	_, err := r.db.ExecContext(ctx, query,
-		user.CompanyID,
-		user.Username,
-		user.Email,
-		user.FullName,
-		user.Phone,
-		user.Role,
-		user.IsAdmin,
-		user.IsHris,
-		user.IsActive,
+		req.CompanyID,
+		req.Username,
+		req.Email,
+		req.FullName,
+		req.Phone,
+		req.Role,
+		req.IsAdmin,
+		req.IsHris,
+		req.IsActive,
 		passwordHash,
-		user.ID)
+		req.ID)
 	return err
 }
 
@@ -320,35 +322,35 @@ func (r *repository) ALUserCompany(ctx context.Context, userID string) ([]UserCo
 
 	out := make([]UserCompanyItem, 0)
 	for rows.Next() {
-		var item UserCompanyItem
+		var res UserCompanyItem
 		if err := rows.Scan(
-			&item.ID,
-			&item.UserID,
-			&item.CompanyID,
-			&item.CompanyName,
-			&item.IsActive); err != nil {
+			&res.ID,
+			&res.UserID,
+			&res.CompanyID,
+			&res.CompanyName,
+			&res.IsActive); err != nil {
 			return nil, err
 		}
-		out = append(out, item)
+		out = append(out, res)
 	}
 	return out, rows.Err()
 }
 
-func (r *repository) ACUserCompany(ctx context.Context, item UserCompanyItem) error {
+func (r *repository) ACUserCompany(ctx context.Context, req UserCompanyItem) error {
 	query := `
 		INSERT INTO "dat_user_company" (
 			id, user_id, company_id, is_active, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, NOW(), NOW())
 	`
 	_, err := r.db.ExecContext(ctx, query,
-		item.ID,
-		item.UserID,
-		item.CompanyID,
-		item.IsActive)
+		req.ID,
+		req.UserID,
+		req.CompanyID,
+		req.IsActive)
 	return err
 }
 
-func (r *repository) AUUserCompany(ctx context.Context, item UserCompanyItem) error {
+func (r *repository) AUUserCompany(ctx context.Context, req UserCompanyItem) error {
 	query := `
 		UPDATE "dat_user_company"
 		SET 	user_id = $1,
@@ -358,10 +360,10 @@ func (r *repository) AUUserCompany(ctx context.Context, item UserCompanyItem) er
 		WHERE   id = $4
 	`
 	_, err := r.db.ExecContext(ctx, query,
-		item.UserID,
-		item.CompanyID,
-		item.IsActive,
-		item.ID)
+		req.UserID,
+		req.CompanyID,
+		req.IsActive,
+		req.ID)
 	return err
 }
 
@@ -386,36 +388,36 @@ func (r *repository) ALUserPrivilege(ctx context.Context, userCompanyID string) 
 
 	out := make([]UserPrivilegeItem, 0)
 	for rows.Next() {
-		var item UserPrivilegeItem
+		var res UserPrivilegeItem
 		if err := rows.Scan(
-			&item.ID,
-			&item.UserCompanyID,
-			&item.ModuleID,
-			&item.ModuleCode,
-			&item.ModuleName,
-			&item.Level); err != nil {
+			&res.ID,
+			&res.UserCompanyID,
+			&res.ModuleID,
+			&res.ModuleCode,
+			&res.ModuleName,
+			&res.Level); err != nil {
 			return nil, err
 		}
-		out = append(out, item)
+		out = append(out, res)
 	}
 	return out, rows.Err()
 }
 
-func (r *repository) ACUserPrivilege(ctx context.Context, item UserPrivilegeItem) error {
+func (r *repository) ACUserPrivilege(ctx context.Context, req UserPrivilegeItem) error {
 	query := `
 		INSERT INTO "dat_user_privilege" (
 			id, user_company_id, module_id, level, created_at, updated_at
 		) VALUES ($1, $2, $3, $4::dat_action_type, NOW(), NOW())
 	`
 	_, err := r.db.ExecContext(ctx, query,
-		item.ID,
-		item.UserCompanyID,
-		item.ModuleID,
-		item.Level)
+		req.ID,
+		req.UserCompanyID,
+		req.ModuleID,
+		req.Level)
 	return err
 }
 
-func (r *repository) AUUserPrivilege(ctx context.Context, item UserPrivilegeItem) error {
+func (r *repository) AUUserPrivilege(ctx context.Context, req UserPrivilegeItem) error {
 	query := `
 		UPDATE "dat_user_privilege"
 		SET 	user_company_id = $1,
@@ -425,9 +427,9 @@ func (r *repository) AUUserPrivilege(ctx context.Context, item UserPrivilegeItem
 		WHERE   id = $4
 	`
 	_, err := r.db.ExecContext(ctx, query,
-		item.UserCompanyID,
-		item.ModuleID,
-		item.Level,
-		item.ID)
+		req.UserCompanyID,
+		req.ModuleID,
+		req.Level,
+		req.ID)
 	return err
 }

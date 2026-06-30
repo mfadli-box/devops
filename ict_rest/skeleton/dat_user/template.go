@@ -223,21 +223,21 @@ type UserAction struct {
 type Repository interface {
 	PGUserName(ctx context.Context, companyID string, username string) (*UserProfile, error)
 	PGUserID(ctx context.Context, userID string) (*UserProfile, error)
-	PELogin(ctx context.Context, p UserSession) error
+	PELogin(ctx context.Context, req UserSession) error
 	PELogout(ctx context.Context, token string) error
 	PUProfile(ctx context.Context, userID string, req UserProfileEdit) error
 	PGPassword(ctx context.Context, userID string) (string, bool, error)
 	PUPassword(ctx context.Context, userID string, passwordHash string) error
 	PLHistory(ctx context.Context, userID string, limit int) ([]UserAction, error)
 	ALUser(ctx context.Context) ([]UserItem, error)
-	ACUser(ctx context.Context, user UserItem, passwordHash string) error
-	AUUser(ctx context.Context, user UserItem, passwordHash string) error
+	ACUser(ctx context.Context, req UserItem, passwordHash string) error
+	AUUser(ctx context.Context, req UserItem, passwordHash string) error
 	ALUserCompany(ctx context.Context, userID string) ([]UserCompanyItem, error)
-	ACUserCompany(ctx context.Context, item UserCompanyItem) error
-	AUUserCompany(ctx context.Context, item UserCompanyItem) error
+	ACUserCompany(ctx context.Context, req UserCompanyItem) error
+	AUUserCompany(ctx context.Context, req UserCompanyItem) error
 	ALUserPrivilege(ctx context.Context, userCompanyID string) ([]UserPrivilegeItem, error)
-	ACUserPrivilege(ctx context.Context, item UserPrivilegeItem) error
-	AUUserPrivilege(ctx context.Context, item UserPrivilegeItem) error
+	ACUserPrivilege(ctx context.Context, req UserPrivilegeItem) error
+	AUUserPrivilege(ctx context.Context, req UserPrivilegeItem) error
 }
 
 type UseCase interface {

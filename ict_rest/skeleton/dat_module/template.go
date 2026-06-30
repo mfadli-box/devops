@@ -64,8 +64,8 @@ type ModuleEdit struct {
 type Repository interface {
 	PLModule(ctx context.Context, userID, companyID string) ([]ModuleItem, error)
 	ALModule(ctx context.Context) ([]ModuleList, error)
-	ACModule(ctx context.Context, item ModuleList) error
-	AUModule(ctx context.Context, item ModuleList) error
+	ACModule(ctx context.Context, req ModuleList) error
+	AUModule(ctx context.Context, req ModuleList) error
 }
 
 type UseCase interface {

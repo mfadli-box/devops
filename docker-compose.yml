@@ -185,3 +185,27 @@ services:
     networks:
       blackbox:
         ipv4_address: 172.99.66.12
+
+  ict_auto_mikrotik:
+    build:
+      context: ./ict_auto/ict_mikrotik
+      dockerfile: Dockerfile
+    container_name: ict_auto_mikrotik
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      - PG_HOST=${PG_POOL:-ict_pool}
+      - PG_PORT=${PG_PORT:-5432}
+      - PG_USER=${PG_USER:-dbe}
+      - PG_PASS=${PG_PASS:-rahasia}
+      - PG_DATA=${PG_DATA:-ict}
+      - IS_POOL=${IS_POOL:-true}
+      - TZ=${TZ:-Asia/Jakarta}
+    depends_on:
+      - ict_pool
+    restart: always
+    networks:
+      blackbox:
+        ipv4_address: 172.99.66.13

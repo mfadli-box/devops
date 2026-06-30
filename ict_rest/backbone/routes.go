@@ -18,9 +18,9 @@ import (
 func SetRouter() *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	rest := gin.Default()
-	rest.SetTrustedProxies([]string{"127.0.0.1"})
+	rest.SetTrustedProxies([]string{"localhost", "172.99.66.6"})
 	rest.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000", "http://172.99.66.6:36666"},
+		AllowOrigins:     []string{"http://localhost:36666", "http://172.99.66.6:36666"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -101,14 +101,15 @@ func SetRouter() *gin.Engine {
 	rest.GET("/rest/pages/NW01/history", USLoad(), ictSecurityH.NLLOG)
 	rest.GET("/rest/pages/NW01/whitelist", USLoad(), ictSecurityH.NLIPW)
 	rest.GET("/rest/pages/NW01/blacklist", USLoad(), ictSecurityH.NLIPB)
-	rest.POST("/rest/pages/NW01/waf", USLoad(), USLogs("c_sec_waf"), ictSecurityH.NCWAF)
-	rest.POST("/rest/pages/NW01/whitelist", USLoad(), USLogs("c_sec_whitelist"), ictSecurityH.NCIPM)
-	rest.DELETE("/rest/pages/NW01/waf/:id", USLoad(), USLogs("d_sec_waf"), ictSecurityH.NDWAF)
-	rest.DELETE("/rest/pages/NW01/whitelist/:id", USLoad(), USLogs("d_sec_whitelist"), ictSecurityH.NDIPW)
+	rest.POST("/rest/pages/NW01/waf", USLoad(), USLogs("c_NW01_waf"), ictSecurityH.NCWAF)
+	rest.POST("/rest/pages/NW01/whitelist", USLoad(), USLogs("c_NW01_whitelist"), ictSecurityH.NCIPM)
+	rest.DELETE("/rest/pages/NW01/waf/:id", USLoad(), USLogs("d_NW01_waf"), ictSecurityH.NDWAF)
+	rest.DELETE("/rest/pages/NW01/whitelist/:id", USLoad(), USLogs("d_NW01_whitelist"), ictSecurityH.NDIPW)
 
 	rest.GET("/rest/pages/NW02/sla", USLoad(), ictMonitorH.URSla)
 	rest.GET("/rest/pages/NW02/summary", USLoad(), ictMonitorH.URSum)
-	rest.GET("/rest/pages/NW02/detail", USLoad(), ictMonitorH.URLog)
+	rest.GET("/rest/pages/NW02/logs", USLoad(), ictMonitorH.URLog)
+	rest.DELETE("/rest/pages/NW02/logs/:id", USLoad(), USLogs("d_NW02_log"), ictMonitorH.DURLog)
 
 	rest.POST("/hook/uptimerobot", ictMonitorH.URHook)
 

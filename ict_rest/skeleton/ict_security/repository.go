@@ -29,18 +29,18 @@ func (r *repository) NLSLA(ctx context.Context, limit, offset int) ([]SLAInfo, e
 
 	var list []SLAInfo
 	for rows.Next() {
-		var s SLAInfo
+		var res SLAInfo
 		if err := rows.Scan(
-			&s.ID,
-			&s.Date,
-			&s.TotalRequests,
-			&s.SuccessfulRequests,
-			&s.ClientErrors,
-			&s.ServerErrors,
-			&s.AttackRequests,
-			&s.AvgResponseTime,
-			&s.SLAPercentage); err == nil {
-			list = append(list, s)
+			&res.ID,
+			&res.Date,
+			&res.TotalRequests,
+			&res.SuccessfulRequests,
+			&res.ClientErrors,
+			&res.ServerErrors,
+			&res.AttackRequests,
+			&res.AvgResponseTime,
+			&res.SLAPercentage); err == nil {
+			list = append(list, res)
 		}
 	}
 	if list == nil {
@@ -65,13 +65,13 @@ func (r *repository) NLIPW(ctx context.Context, search string, limit, offset int
 
 	var list []IPWInfo
 	for rows.Next() {
-		var w IPWInfo
+		var res IPWInfo
 		if err := rows.Scan(
-			&w.ID,
-			&w.IPOrCIDR,
-			&w.Description,
-			&w.CreatedAt); err == nil {
-			list = append(list, w)
+			&res.ID,
+			&res.IPOrCIDR,
+			&res.Description,
+			&res.CreatedAt); err == nil {
+			list = append(list, res)
 		}
 	}
 	if list == nil {
@@ -113,15 +113,15 @@ func (r *repository) NLIPB(ctx context.Context, search string, limit, offset int
 
 	var list []IPBInfo
 	for rows.Next() {
-		var b IPBInfo
+		var res IPBInfo
 		if err := rows.Scan(
-			&b.ID,
-			&b.IP,
-			&b.ThreatScore,
-			&b.Reason,
-			&b.BannedAt,
-			&b.ExpiresAt); err == nil {
-			list = append(list, b)
+			&res.ID,
+			&res.IP,
+			&res.ThreatScore,
+			&res.Reason,
+			&res.BannedAt,
+			&res.ExpiresAt); err == nil {
+			list = append(list, res)
 		}
 	}
 	if list == nil {
@@ -155,15 +155,15 @@ func (r *repository) NLWAF(ctx context.Context, search string, limit, offset int
 
 	var list []WAFList
 	for rows.Next() {
-		var b WAFList
+		var res WAFList
 		if err := rows.Scan(
-			&b.ID,
-			&b.Domain,
-			&b.URLPath,
-			&b.ArgsPattern,
-			&b.Description,
-			&b.CreatedAt); err == nil {
-			list = append(list, b)
+			&res.ID,
+			&res.Domain,
+			&res.URLPath,
+			&res.ArgsPattern,
+			&res.Description,
+			&res.CreatedAt); err == nil {
+			list = append(list, res)
 		}
 	}
 
@@ -206,16 +206,16 @@ func (r *repository) NLATC(ctx context.Context, date string) ([]ATCList, error) 
 
 	var list []ATCList
 	for rows.Next() {
-		var s ATCList
+		var res ATCList
 		if err := rows.Scan(
-			&s.ID,
-			&s.Date,
-			&s.ClientIP,
-			&s.TrafficType,
-			&s.TargetDomain,
-			&s.TotalHits,
-			&s.LastSeen); err == nil {
-			list = append(list, s)
+			&res.ID,
+			&res.Date,
+			&res.ClientIP,
+			&res.TrafficType,
+			&res.TargetDomain,
+			&res.TotalHits,
+			&res.LastSeen); err == nil {
+			list = append(list, res)
 		}
 	}
 	if list == nil {
@@ -238,27 +238,27 @@ func (r *repository) NLLOG(ctx context.Context, ip, date, table string) (*LOGLis
 	}
 	defer rows.Close()
 
-	resp := &LOGList{
+	list := &LOGList{
 		ClientIP: ip,
 		Date:     date,
 		Logs:     []LOGItem{},
 	}
 	for rows.Next() {
-		var ld LOGItem
+		var res LOGItem
 		err := rows.Scan(
-			&ld.ID,
-			&ld.Timestamp,
-			&ld.URL,
-			&ld.Status,
-			&ld.TrafficType,
-			&ld.CountryISO,
-			&ld.ResponseTime)
+			&res.ID,
+			&res.Timestamp,
+			&res.URL,
+			&res.Status,
+			&res.TrafficType,
+			&res.CountryISO,
+			&res.ResponseTime)
 		if err == nil {
-			resp.Logs = append(resp.Logs, ld)
+			list.Logs = append(list.Logs, res)
 		}
 	}
-	resp.TotalHits = len(resp.Logs)
-	return resp, nil
+	list.TotalHits = len(list.Logs)
+	return list, nil
 }
 
 func (r *repository) XGATCDate(ctx context.Context, tx TxOrDB, ip string) ([]SLAMode, error) {
@@ -274,16 +274,16 @@ func (r *repository) XGATCDate(ctx context.Context, tx TxOrDB, ip string) ([]SLA
 	}
 	defer rows.Close()
 
-	var modifiers []SLAMode
+	var list []SLAMode
 	for rows.Next() {
-		var m SLAMode
+		var res SLAMode
 		if err := rows.Scan(
-			&m.Date,
-			&m.LogCount); err == nil {
-			modifiers = append(modifiers, m)
+			&res.Date,
+			&res.LogCount); err == nil {
+			list = append(list, res)
 		}
 	}
-	return modifiers, nil
+	return list, nil
 }
 
 func (r *repository) XGWAFDate(ctx context.Context, tx TxOrDB, domain, path string, args *string) ([]SLAMode, error) {
@@ -301,16 +301,16 @@ func (r *repository) XGWAFDate(ctx context.Context, tx TxOrDB, domain, path stri
 	}
 	defer rows.Close()
 
-	var modifiers []SLAMode
+	var list []SLAMode
 	for rows.Next() {
-		var m SLAMode
+		var res SLAMode
 		if err := rows.Scan(
-			&m.Date,
-			&m.LogCount); err == nil {
-			modifiers = append(modifiers, m)
+			&res.Date,
+			&res.LogCount); err == nil {
+			list = append(list, res)
 		}
 	}
-	return modifiers, nil
+	return list, nil
 }
 
 func (r *repository) XMLOGSIp(ctx context.Context, tx TxOrDB, ip string) (int64, error) {

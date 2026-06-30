@@ -73,11 +73,11 @@ type Repository interface {
 	PLCompany(ctx context.Context) ([]CompanyItem, error)
 	PLCompanyUser(ctx context.Context, userID string) ([]CompanyItem, error)
 	ALCompany(ctx context.Context) ([]CompanyItem, error)
-	ACCompany(ctx context.Context, company CompanyItem) error
-	AUCompany(ctx context.Context, company CompanyItem) error
+	ACCompany(ctx context.Context, req CompanyItem) error
+	AUCompany(ctx context.Context, req CompanyItem) error
 	ALCompanyModule(ctx context.Context, companyID string) ([]CompanyModuleItem, error)
-	ACCompanyModule(ctx context.Context, item CompanyModuleItem) error
-	AUCompanyModule(ctx context.Context, item CompanyModuleItem) error
+	ACCompanyModule(ctx context.Context, req CompanyModuleItem) error
+	AUCompanyModule(ctx context.Context, req CompanyModuleItem) error
 }
 
 type UseCase interface {

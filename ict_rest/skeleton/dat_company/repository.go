@@ -28,14 +28,14 @@ func (r *repository) PLCompany(ctx context.Context) ([]CompanyItem, error) {
 
 	var out []CompanyItem
 	for rows.Next() {
-		var c CompanyItem
+		var res CompanyItem
 		if err := rows.Scan(
-			&c.ID,
-			&c.Name,
-			&c.Slug); err != nil {
+			&res.ID,
+			&res.Name,
+			&res.Slug); err != nil {
 			continue
 		}
-		out = append(out, c)
+		out = append(out, res)
 	}
 	return out, nil
 }
@@ -58,14 +58,14 @@ func (r *repository) PLCompanyUser(ctx context.Context, userID string) ([]Compan
 
 	var out []CompanyItem
 	for rows.Next() {
-		var c CompanyItem
+		var res CompanyItem
 		if err := rows.Scan(
-			&c.ID,
-			&c.Name,
-			&c.Slug); err != nil {
+			&res.ID,
+			&res.Name,
+			&res.Slug); err != nil {
 			continue
 		}
-		out = append(out, c)
+		out = append(out, res)
 	}
 	return out, nil
 }
@@ -90,44 +90,44 @@ func (r *repository) ALCompany(ctx context.Context) ([]CompanyItem, error) {
 
 	out := make([]CompanyItem, 0)
 	for rows.Next() {
-		var c CompanyItem
+		var res CompanyItem
 		if err := rows.Scan(
-			&c.ID,
-			&c.Slug,
-			&c.Name,
-			&c.VatID,
-			&c.RegNo,
-			&c.Address,
-			&c.Valuta,
-			&c.HrisLink,
-			&c.IsActive); err != nil {
+			&res.ID,
+			&res.Slug,
+			&res.Name,
+			&res.VatID,
+			&res.RegNo,
+			&res.Address,
+			&res.Valuta,
+			&res.HrisLink,
+			&res.IsActive); err != nil {
 			return nil, err
 		}
-		out = append(out, c)
+		out = append(out, res)
 	}
 	return out, rows.Err()
 }
 
-func (r *repository) ACCompany(ctx context.Context, company CompanyItem) error {
+func (r *repository) ACCompany(ctx context.Context, req CompanyItem) error {
 	query := `
 		INSERT INTO "dat_company" (
 			id, slug, name, vat_id, reg_no, address, valuta, hris_link, is_active, created_at, updated_at
 		) VALUES ($1, $2, $3, NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, ''), $7, NULLIF($8, ''), $9, NOW(), NOW())
 	`
 	_, err := r.db.ExecContext(ctx, query,
-		company.ID,
-		company.Slug,
-		company.Name,
-		company.VatID,
-		company.RegNo,
-		company.Address,
-		company.Valuta,
-		company.HrisLink,
-		company.IsActive)
+		req.ID,
+		req.Slug,
+		req.Name,
+		req.VatID,
+		req.RegNo,
+		req.Address,
+		req.Valuta,
+		req.HrisLink,
+		req.IsActive)
 	return err
 }
 
-func (r *repository) AUCompany(ctx context.Context, company CompanyItem) error {
+func (r *repository) AUCompany(ctx context.Context, req CompanyItem) error {
 	query := `
 		UPDATE "dat_company"
 		SET 	slug = $1,
@@ -142,15 +142,15 @@ func (r *repository) AUCompany(ctx context.Context, company CompanyItem) error {
 		WHERE   id = $9
 	`
 	_, err := r.db.ExecContext(ctx, query,
-		company.Slug,
-		company.Name,
-		company.VatID,
-		company.RegNo,
-		company.Address,
-		company.Valuta,
-		company.HrisLink,
-		company.IsActive,
-		company.ID)
+		req.Slug,
+		req.Name,
+		req.VatID,
+		req.RegNo,
+		req.Address,
+		req.Valuta,
+		req.HrisLink,
+		req.IsActive,
+		req.ID)
 	return err
 }
 
@@ -175,36 +175,36 @@ func (r *repository) ALCompanyModule(ctx context.Context, companyID string) ([]C
 
 	out := make([]CompanyModuleItem, 0)
 	for rows.Next() {
-		var item CompanyModuleItem
+		var res CompanyModuleItem
 		if err := rows.Scan(
-			&item.ID,
-			&item.CompanyID,
-			&item.ModuleID,
-			&item.ModuleCode,
-			&item.ModuleName,
-			&item.IsActive); err != nil {
+			&res.ID,
+			&res.CompanyID,
+			&res.ModuleID,
+			&res.ModuleCode,
+			&res.ModuleName,
+			&res.IsActive); err != nil {
 			return nil, err
 		}
-		out = append(out, item)
+		out = append(out, res)
 	}
 	return out, rows.Err()
 }
 
-func (r *repository) ACCompanyModule(ctx context.Context, item CompanyModuleItem) error {
+func (r *repository) ACCompanyModule(ctx context.Context, req CompanyModuleItem) error {
 	query := `
 		INSERT INTO "dat_company_module" (
 			id, company_id, module_id, is_active, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, NOW(), NOW())
 	`
 	_, err := r.db.ExecContext(ctx, query,
-		item.ID,
-		item.CompanyID,
-		item.ModuleID,
-		item.IsActive)
+		req.ID,
+		req.CompanyID,
+		req.ModuleID,
+		req.IsActive)
 	return err
 }
 
-func (r *repository) AUCompanyModule(ctx context.Context, item CompanyModuleItem) error {
+func (r *repository) AUCompanyModule(ctx context.Context, req CompanyModuleItem) error {
 	query := `
 		UPDATE "dat_company_module"
 		SET 	company_id = $1,
@@ -214,9 +214,9 @@ func (r *repository) AUCompanyModule(ctx context.Context, item CompanyModuleItem
 		WHERE   id = $4
 	`
 	_, err := r.db.ExecContext(ctx, query,
-		item.CompanyID,
-		item.ModuleID,
-		item.IsActive,
-		item.ID)
+		req.CompanyID,
+		req.ModuleID,
+		req.IsActive,
+		req.ID)
 	return err
 }

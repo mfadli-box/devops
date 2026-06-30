@@ -24,7 +24,10 @@ This project employs a **Monorepo** approach, managed as an integrated DevOps st
 │   ├── ict_rotate_log/
 │   │   ├── main.go
 │   │   └── Dockerfile
-│   └── [other_automation_service]/
+│   ├── ict_mikrotik/
+│   │   ├── main.go
+│   │   └── Dockerfile
+│   └── [new_feature_automation_service]/
 │       ├── main.go
 │       └── Dockerfile
 ├── ict_rest/                      # Backend REST API (Gin Gonic)
@@ -40,8 +43,20 @@ This project employs a **Monorepo** approach, managed as an integrated DevOps st
 └── ict_site/                      # Frontend Web Application (Next.js)
     ├── src/                       # Main Source Code (TypeScript)
     │   ├── app/                   # Application
+    │   │   ├── api/               # Api Proxy
+    │   │   │   └── [page]         # Api Proxy for Page
+    │   │   ├── board/             # Dashboard
+    │   │   │   └── [page]         # Main Page
+    │   │   └── login/             # Login
     │   ├── lib/                   # Library
     │   └── uix/                   # UI/UX
+    │       ├── board/             # Board Components
+    │       ├── form/              # Form Collections
+    │       │   └── [page]         # Form for Page
+    │       ├── objects/           # Input Collections
+    │       │   └── [page]         # Object for Page
+    │       └── pages/             # Pages Collections
+    │           └── [page]         # Content for Page
     └── Dockerfile
 ```
 
@@ -97,8 +112,10 @@ docker compose down
 
 ## 🌐 4. Development Workflow
 
-1. **Database & API Synchronization:** When adding a new feature, define the database schema in `ict_base/prisma/schema/[cluster_name].prisma` first, then create its handling module inside `ict_rest/skeleton/[cluster_name]/`.
+1. **Database Development:** When adding a new feature, define the database schema in `ict_base/prisma/schema/[cluster_name].prisma` first, then create its handling module inside `ict_rest/skeleton/[cluster_name]/`.
 2. **Automation Development:** Add a dedicated new folder under `ict_auto/` for every new cron job, worker, or script function.
+3. **Backend Development:** When adding a new feature, define cluster in `ict_rest/skeleton/[cluster_name]/` using clean architecture `template.go` (Struct & Interface) -> `repository.go` (Database Query) -> `usecase.go` (Business Logic) -> `handler.go` (Process Operations), and last add route inside `ict_rest/backbone/routes.go`
+4. **Frontend Development:** When adding a new feature, define the pages in `ict_site/src/app/board/[page_code]/page.tsx` first, then create its api proxy inside `ict_site/src/app/api/pages/[page_code]/[path]/route.ts` and UI inside `ict_site/src/uix/pages/[page_code]/[content].tsx`. For component `ict_site/src/uix/object/[object_name].tsx`, for library or global function `ict_site/src/lib/[library_name].ts` and form `ict_site/src/uix/form/[form_name].tsx`.
 
 ---
 
